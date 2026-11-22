@@ -1,0 +1,12 @@
+# Build outputs (installers go to GitHub Releases, not the repo)
+/ScreenRest.exe
+/dist/
+/website/download/
+*.zip
+
+# Local tooling / scratch
+/.claude/
+/comfy/variants/
+/comfy/eye_variants/
+/comfy/test_*.json
+/marketing/facebook/

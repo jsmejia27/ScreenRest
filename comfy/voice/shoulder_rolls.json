@@ -1,0 +1,39 @@
+{
+    "2":  {
+              "inputs":  {
+                             "exaggeration":  0.4,
+                             "top_p":  1,
+                             "seed":  23,
+                             "text":  "Shoulder rolls. Roll both shoulders up, back and down 10 times. Then squeeze your shoulder blades together and hold for 5 seconds, 3 times.",
+                             "keep_model_loaded":  true,
+                             "cfg_weight":  0.5,
+                             "audio_prompt":  [
+                                                  "1",
+                                                  0
+                                              ],
+                             "min_p":  0.05,
+                             "language":  "English (en)",
+                             "repetition_penalty":  2,
+                             "use_cpu":  false,
+                             "temperature":  0.5
+                         },
+              "class_type":  "FL_ChatterboxMultilingualTTS"
+          },
+    "1":  {
+              "inputs":  {
+                             "audio":  "screenrest_female_ref.wav"
+                         },
+              "class_type":  "LoadAudio"
+          },
+    "3":  {
+              "inputs":  {
+                             "audio":  [
+                                           "2",
+                                           0
+                                       ],
+                             "filename_prefix":  "screenrest_voice_f/s23/shoulder_rolls",
+                             "format":  "flac"
+                         },
+              "class_type":  "SaveAudioAdvanced"
+          }
+}

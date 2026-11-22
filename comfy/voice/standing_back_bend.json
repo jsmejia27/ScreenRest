@@ -1,0 +1,39 @@
+{
+    "2":  {
+              "inputs":  {
+                             "exaggeration":  0.4,
+                             "top_p":  1,
+                             "seed":  23,
+                             "text":  "Standing back bend. Put your hands on your lower back, fingers pointing down. Gently lean back and look up. Hold for 3 seconds. Repeat 5 times.",
+                             "keep_model_loaded":  true,
+                             "cfg_weight":  0.5,
+                             "audio_prompt":  [
+                                                  "1",
+                                                  0
+                                              ],
+                             "min_p":  0.05,
+                             "language":  "English (en)",
+                             "repetition_penalty":  2,
+                             "use_cpu":  false,
+                             "temperature":  0.5
+                         },
+              "class_type":  "FL_ChatterboxMultilingualTTS"
+          },
+    "1":  {
+              "inputs":  {
+                             "audio":  "screenrest_female_ref.wav"
+                         },
+              "class_type":  "LoadAudio"
+          },
+    "3":  {
+              "inputs":  {
+                             "audio":  [
+                                           "2",
+                                           0
+                                       ],
+                             "filename_prefix":  "screenrest_voice_f/s23/standing_back_bend",
+                             "format":  "flac"
+                         },
+              "class_type":  "SaveAudioAdvanced"
+          }
+}
