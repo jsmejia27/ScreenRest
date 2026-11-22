@@ -215,26 +215,58 @@ Save-Slide $s '05_download.png'
 # ---------------------------------------------------------------- GitHub: README banner / social preview (1280x640) + slide copies
 $gh = Join-Path (Split-Path $PSScriptRoot -Parent) 'docs\images'
 New-Item -ItemType Directory -Force $gh | Out-Null
-$bmp = New-Object Drawing.Bitmap 1280, 640
-$g = [Drawing.Graphics]::FromImage($bmp)
-$g.SmoothingMode = 'AntiAlias'; $g.InterpolationMode = 'HighQualityBicubic'; $g.TextRenderingHint = 'AntiAlias'; $g.PixelOffsetMode = 'HighQuality'
-$bg = New-Object Drawing.SolidBrush $Night; $g.FillRectangle($bg, 0, 0, 1280, 640); $bg.Dispose()
-$happy = [Drawing.Image]::FromFile((Join-Path $Photos 'screenrest_fb\stretch_00001_.png'))
-Fill-Cover $g $happy 560 0 720 640 0.62 0.45; $happy.Dispose()
-$b = New-Object Drawing.Drawing2D.LinearGradientBrush ((New-Object Drawing.PointF 559, 0), (New-Object Drawing.PointF 900, 0), $Night, ([Drawing.Color]::FromArgb(0, 14, 22, 28)))
-$g.FillRectangle($b, 560, 0, 340, 640); $b.Dispose()
-Logo $g 72 62 72
-Text $g 'ScreenRest' 60 'Bold' $White 160 62 500 | Out-Null
-$y = 172
-$y += Text $g 'Break reminders for Windows 10 & 11' 44 'Bold' $White 70 $y 600
-$y += 22
-foreach ($line in @('Eye break every 20 minutes (20-20-20 rule)', 'Voice-guided stretch break every hour', 'Waits while you are in a meeting', 'No account, no ads, works offline')) {
+function Check($g, $x, $y) {
     $p = New-Object Drawing.Pen $Accent, 5; $p.StartCap = 'Round'; $p.EndCap = 'Round'; $p.LineJoin = 'Round'
-    $g.DrawLines($p, [Drawing.PointF[]]@((New-Object Drawing.PointF 76, ($y + 18)), (New-Object Drawing.PointF 84, ($y + 26)), (New-Object Drawing.PointF 98, ($y + 10)))); $p.Dispose()
-    $y += Text $g $line 26 'Regular' $Soft 112 $y 520
-    $y += 8
+    $g.DrawLines($p, [Drawing.PointF[]]@((New-Object Drawing.PointF $x, ($y + 18)), (New-Object Drawing.PointF ($x + 8), ($y + 26)), (New-Object Drawing.PointF ($x + 22), ($y + 10)))); $p.Dispose()
 }
-Pill $g ('FREE' + $Dot + 'OPEN SOURCE' + $Dot + 'MIT') 72 ($y + 22) $Night $Accent
-$g.Dispose(); $bmp.Save((Join-Path $gh 'banner.png'), [Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose(); 'wrote docs\images\banner.png'
+function Banner($path, $title, $lines, $pill) {
+    $bmp = New-Object Drawing.Bitmap 1280, 640
+    $g = [Drawing.Graphics]::FromImage($bmp)
+    $g.SmoothingMode = 'AntiAlias'; $g.InterpolationMode = 'HighQualityBicubic'; $g.TextRenderingHint = 'AntiAlias'; $g.PixelOffsetMode = 'HighQuality'
+    $bg = New-Object Drawing.SolidBrush $Night; $g.FillRectangle($bg, 0, 0, 1280, 640); $bg.Dispose()
+    $happy = [Drawing.Image]::FromFile((Join-Path $Photos 'screenrest_fb\stretch_00001_.png'))
+    Fill-Cover $g $happy 560 0 720 640 0.62 0.45; $happy.Dispose()
+    $b = New-Object Drawing.Drawing2D.LinearGradientBrush ((New-Object Drawing.PointF 559, 0), (New-Object Drawing.PointF 900, 0), $Night, ([Drawing.Color]::FromArgb(0, 14, 22, 28)))
+    $g.FillRectangle($b, 560, 0, 340, 640); $b.Dispose()
+    Logo $g 72 62 72
+    Text $g 'ScreenRest' 60 'Bold' $White 160 62 500 | Out-Null
+    $y = 172
+    $y += Text $g $title 44 'Bold' $White 70 $y 640
+    $y += 22
+    foreach ($line in $lines) { Check $g 76 $y; $y += Text $g $line 26 'Regular' $Soft 112 $y 560; $y += 8 }
+    Pill $g $pill 72 ($y + 22) $Night $Accent
+    $g.Dispose(); $bmp.Save($path, [Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose(); "wrote $path"
+}
+Banner (Join-Path $gh 'banner.png') 'Break reminders for Windows 10 & 11' @(
+    'Eye break every 20 minutes (20-20-20 rule)', 'Voice-guided stretch break every hour',
+    'Waits while you are in a meeting', 'No account, no ads, works offline') ('FREE' + $Dot + 'OPEN SOURCE' + $Dot + 'MIT')
+Banner (Join-Path $gh 'banner_tl.png') 'Paalala sa pahinga para sa Windows 10 at 11' @(
+    'Pahinga sa mata tuwing 20 minuto (20-20-20)', 'Stretch break tuwing isang oras, may boses',
+    'Naghihintay habang may meeting ka', 'Walang account, walang ads, kahit offline') ('LIBRE' + $Dot + 'OPEN SOURCE' + $Dot + 'MIT')
 Get-ChildItem $out -Filter '0*.png' | Copy-Item -Destination $gh
 'copied slides to docs\images'
+
+# ---------------------------------------------------------------- Facebook update post: "open source na" (single 4:5 image)
+$s = New-Slide; $g = $s.g; Night-Bg $g
+$y = Header $g 'UPDATE' 'Open source na ang ScreenRest!' 'Bukas na sa lahat ang source code sa GitHub, kaya puwedeng silipin ng kahit sino kung paano ito gumagana.'
+$items = @(
+    @('Libre, at MIT license', 'Puwedeng gamitin, kopyahin at i-share.'),
+    @('Bukas ang code sa lahat', 'Makikita mo mismo ang bawat linya.'),
+    @('Puwedeng i-build mismo', 'Gawin ang app mula sa source, sa sarili mong PC.'),
+    @('Walang account, walang ads', 'Sa PC mo lang ang data mo.')
+)
+$cy = [Math]::Max(520, $y + 44)
+foreach ($it in $items) {
+    Fill-Round $g 60 $cy 960 116 20 ([Drawing.Color]::FromArgb(215, 22, 32, 40))
+    $b = New-Object Drawing.SolidBrush ([Drawing.Color]::FromArgb(45, 70, 205, 180)); $g.FillEllipse($b, 88, ($cy + 30), 56, 56); $b.Dispose()
+    Check $g 105 ($cy + 40)
+    Text $g $it[0] 34 'Bold' $White 168 ($cy + 18) 830 | Out-Null
+    Text $g $it[1] 26 'Regular' $Soft 168 ($cy + 64) 830 | Out-Null
+    $cy += 132
+}
+$cy += 14
+Fill-Round $g 60 $cy 960 96 48 $Brand
+Text $g ('Link sa unang comment  ' + [char]0x2193) 44 'Bold' $White 60 ($cy + 20) 960 'Center' | Out-Null
+Logo $g 60 1262 44
+Text $g 'ScreenRest' 30 'Bold' $White 114 1265 300 | Out-Null
+Save-Slide $s 'update_open_source.png'
