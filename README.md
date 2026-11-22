@@ -6,7 +6,7 @@ A free, open-source Windows system-tray app that covers your work shift (8:00–
 
 Runs on Windows 10 and 11 using the .NET Framework 4.x that ships with Windows. No internet, no account, no ads. English and Tagalog.
 
-**[⬇ Get the latest release](https://github.com/jsmejia27/ScreenRest/releases/latest)**: installer (`ScreenRest-Setup-x.y.z.exe`) or portable zip.
+**[🌐 Website: screenrest.jilbert.net](https://screenrest.jilbert.net/)** · **[⬇ Get the latest release](https://github.com/jsmejia27/ScreenRest/releases/latest)**: installer (`ScreenRest-Setup-x.y.z.exe`) or portable zip.
 
 > The installer isn't code-signed yet, so Windows SmartScreen may say *"Windows protected your PC"*. Click **More info → Run anyway**, check the SHA-256 in the release notes, or [build it yourself](#6-building-from-source).
 
@@ -164,6 +164,16 @@ This writes `dist\ScreenRest-Setup-<version>.exe` (one-file per-user installer: 
 | `src\IconFactory.cs` | Draws the app icon in code |
 | `installer\` | Setup program and release packaging script |
 | `website\` | Static download site (`index.html`, `assets\`) |
+
+## 7. Website
+
+The project site is live at **[screenrest.jilbert.net](https://screenrest.jilbert.net/)**: features, exercise previews, screenshots, FAQ and download buttons that point to the files on this repo's [Releases page](https://github.com/jsmejia27/ScreenRest/releases).
+
+It's a static, dependency-free page in `website\` (`index.html` plus `assets\`), served by a small read-only Cloudflare Worker from an R2 bucket. To preview it locally:
+
+```powershell
+python -m http.server 8765 --directory .\website
+```
 
 ---
 
