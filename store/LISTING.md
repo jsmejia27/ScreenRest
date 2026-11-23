@@ -1,7 +1,7 @@
 # Microsoft Store listing (copy into Partner Center)
 
 **Category:** Health & fitness · **Price:** Free · **Markets:** all · **Age rating:** answer the questionnaire (no user content, no ads) → expected 3+
-**Privacy policy URL:** https://github.com/jsmejia27/ScreenRest/blob/main/CODE_SIGNING.md#privacy
+**Privacy policy URL:** https://screenrest.jilbert.net/privacy/
 **Website:** https://screenrest.jilbert.net · **Support:** https://github.com/jsmejia27/ScreenRest/issues
 **Reserved name:** Screen Rest · **Store ID:** 9P8LKK7JSWW9 · **Store link:** https://apps.microsoft.com/detail/9P8LKK7JSWW9
 **Screenshots (1920×1080):** store/screenshots/store_en_*.png (English), store_tl_*.png (Filipino), made by make_screenshots.ps1 [-Lang en|tl]
