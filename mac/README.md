@@ -18,7 +18,9 @@ This writes `mac/build/ScreenRest.app`, a universal binary with the exercise vid
 
 This also writes `dist/ScreenRest-<version>-mac.zip` and `.dmg` and prints their SHA-256 checksums. For a quicker one-architecture build while developing, set `ARCHS=arm64`.
 
-The app is signed ad hoc, not notarized. A copy downloaded from the internet will be blocked by Gatekeeper the first time it opens. Right-click the app, choose **Open**, then **Open** again, or allow it under System Settings > Privacy & Security.
+The app is signed ad hoc, not notarized. A copy downloaded from the internet is blocked by Gatekeeper the first time it opens ("can't be opened" or "Apple could not verify..."). Click **Done**, then go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. You only do this once. On macOS 13 and 14, Control-click the app and choose **Open** also works; macOS 15 and later removed that shortcut.
+
+Ready-made downloads are on the [Releases page](https://github.com/jsmejia27/ScreenRest/releases/latest) (`ScreenRest-x.y.z-mac.dmg` and `.zip`).
 
 ## Try it
 
