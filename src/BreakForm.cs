@@ -113,6 +113,9 @@ namespace ScreenRest
                 Margin = new Padding(0, 22, 0, 0),
                 BackColor = Color.Transparent
             };
+            // "Done" ends the break early and counts it as taken (you did the exercise). Strict mode keeps you in.
+            if (opt.AllowSkip)
+                buttons.Controls.Add(MakeButton(L.T("Done", "Tapos na"), () => Finish(BreakResult.Completed), true));
             if (opt.AllowPostpone)
                 buttons.Controls.Add(MakeButton(L.T("Postpone " + opt.PostponeMin + " min", "Ipagpaliban nang " + opt.PostponeMin + " min"), () => Finish(BreakResult.Postponed)));
             if (opt.AllowSkip)
@@ -164,23 +167,24 @@ namespace ScreenRest
             };
         }
 
-        Button MakeButton(string text, Action onClick)
+        Button MakeButton(string text, Action onClick, bool primary = false)
         {
             var b = new Button
             {
                 Text = text,
                 AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
-                ForeColor = Soft,
-                BackColor = Color.FromArgb(30, 42, 50),
-                Font = new Font("Segoe UI", 11f),
+                ForeColor = primary ? Color.White : Soft,
+                BackColor = primary ? Color.FromArgb(30, 158, 138) : Color.FromArgb(30, 42, 50),
+                Font = new Font("Segoe UI", 11f, primary ? FontStyle.Bold : FontStyle.Regular),
                 Padding = new Padding(14, 6, 14, 6),
                 Margin = new Padding(8, 0, 8, 0),
                 Cursor = Cursors.Hand,
                 TabStop = false
             };
-            b.FlatAppearance.BorderColor = Color.FromArgb(60, 78, 90);
-            b.Click += (s, e) => onClick();
+            b.FlatAppearance.BorderColor = primary ? Color.FromArgb(70, 205, 180) : Color.FromArgb(60, 78, 90);
+            // Run the action after the click finishes, so the window isn't closed in the middle of the button's own mouse handling.
+            b.Click += (s, e) => BeginInvoke(onClick);
             return b;
         }
 
