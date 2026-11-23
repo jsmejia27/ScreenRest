@@ -1,16 +1,25 @@
-<p align="center"><img src="docs/images/banner.png" alt="ScreenRest: break reminders for Windows 10 and 11" width="100%"></p>
+<p align="center"><img src="docs/images/banner.png" alt="ScreenRest: break reminders for Windows and Mac" width="100%"></p>
 
 # ScreenRest
 
-A free, open-source Windows system-tray app that covers your work shift (8:00–17:00 by default). It makes you rest your eyes with the 20-20-20 rule and stand up to move every hour, with voice-guided exercises for blood flow and posture.
+A free, open-source break coach for **Windows and macOS** that covers your work shift (8:00–17:00 by default). It lives in the Windows system tray or the Mac menu bar. It makes you rest your eyes with the 20-20-20 rule and stand up to move every hour, with voice-guided exercises for blood flow and posture.
 
-Runs on Windows 10 and 11 using the .NET Framework 4.x that ships with Windows. No internet, no account, no ads. English and Tagalog.
+| | Windows | macOS |
+|---|---|---|
+| Runs on | Windows 10 and 11 (.NET Framework 4.x, built in) | macOS 13 Ventura and later, Apple silicon and Intel |
+| Download | `ScreenRest-Setup-x.y.z.exe` installer, or portable zip | `ScreenRest-x.y.z-mac.dmg`, or zip |
+| Lives in | System tray, near the clock | Menu bar, top right |
+| Source | [`src/`](src/) (C#, WinForms) | [`mac/`](mac/README.md) (Swift, AppKit) |
 
-**macOS:** a native menu bar version for macOS 13 and later (Apple silicon and Intel) is in [`mac/`](mac/README.md). Build it with `./mac/build.sh`.
+No internet, no account, no ads. English and Tagalog. Both versions have the same breaks, exercises, videos, voice-overs and stats, and use the same settings and history file format.
 
-**[🌐 Website: screenrest.jilbert.net](https://screenrest.jilbert.net/)** · **[⬇ Get the latest release](https://github.com/jsmejia27/ScreenRest/releases/latest)**: installer (`ScreenRest-Setup-x.y.z.exe`) or portable zip.
+**[🌐 Website: screenrest.jilbert.net](https://screenrest.jilbert.net/)** · **[⬇ Get the latest release](https://github.com/jsmejia27/ScreenRest/releases/latest)**
 
-> The installer isn't code-signed yet, so Windows SmartScreen may say *"Windows protected your PC"*. Click **More info → Run anyway**, check the SHA-256 in the release notes, or [build it yourself](#6-building-from-source).
+> The downloads aren't code-signed or notarized yet.
+> - **Windows:** SmartScreen may say *"Windows protected your PC"*. Click **More info → Run anyway**.
+> - **Mac:** macOS may say ScreenRest *"can't be opened"* or can't be checked for malware. Click **Done**, then go to **System Settings → Privacy & Security** and click **Open Anyway**. You only do this once. On macOS 13 and 14, Control-click → **Open** also works.
+>
+> Check the SHA-256 against `SHA256SUMS.txt` on the release, or [build it yourself](#6-building-from-source).
 
 ## Screenshots
 
@@ -85,28 +94,29 @@ Over a full day that comes to about **20 eye breaks and 7 stretch breaks**.
 
 ## 3. Using it
 
-1. Run the installer (or unzip the portable build and double-click **`ScreenRest.exe`**). A teal eye icon appears in the system tray near the clock. You may need to click **^** to see it.
-2. Right-click the icon:
+1. **Windows:** run the installer (or unzip the portable build and double-click **`ScreenRest.exe`**). A teal eye icon appears in the system tray near the clock. You may need to click **^** to see it.
+   **Mac:** open the `.dmg`, drag ScreenRest into Applications and open it (see the note above the first time). A teal eye icon appears in the menu bar.
+2. Right-click the icon on Windows, or click it on a Mac:
    - **Take an eye break / stretch break now**
    - **Pause reminders** for a meeting or presentation (30 min, 1 h, 2 h, rest of today)
    - **Today's stats**, also opened by double-clicking the icon
    - **Settings...** to change shift hours, intervals, strict mode, sounds and blink nudges
-   - Tick **Start ScreenRest when I sign in to Windows** in Settings so it covers every shift automatically.
+   - Tick **Start ScreenRest when I sign in to Windows** (Mac: **Open ScreenRest when I log in to my Mac**) in Settings so it covers every shift automatically.
 3. During a break: **Esc** skips and **Postpone 5 min** delays. Both disappear in strict mode.
 
-**Try it in 2 minutes:** `ScreenRest.exe --demo` (eye break every 30 s, stretch every 90 s, ignores shift hours).
+**Try it in 2 minutes:** `ScreenRest.exe --demo` on Windows, or `open /Applications/ScreenRest.app --args --demo` on a Mac (eye break every 30 s, stretch every 90 s, ignores shift hours).
 
 Icon colours: **teal** = tracking, **grey** = paused or off shift, **orange** = on a break.
 
 **Language:** English or Tagalog, picked on the welcome screen or in Settings → *Language / Wika*. All screens, exercises and summaries switch; the voice-overs stay in English.
 
-Files are kept in `%APPDATA%\ScreenRest\`: `settings.ini` and `stats.csv` (one row per day, including your check-in ratings; opens in Excel). Nothing leaves your PC.
+Files are kept in `%APPDATA%\ScreenRest\` on Windows and `~/Library/Application Support/ScreenRest/` on a Mac: `settings.ini` and `stats.csv` (one row per day, including your check-in ratings; opens in Excel or Numbers). The format is the same on both, so you can copy your history across. Nothing leaves your computer.
 
 ## 4. Smart features
 
 | Feature | What it does | Setting |
 |---|---|---|
-| **Voice guidance** | Each step is read aloud by a calm voice. The demo video plays for the first 8 s, then dims ("Eyes off the screen. Follow the voice."). Press **V** to see it again. | *Voice guidance*, *Show demo video for* |
+| **Voice guidance** | Each step is read aloud by a calm voice. On Windows the demo video plays for the first 8 s, then dims ("Eyes off the screen. Follow the voice."); press **V** to see it again. On a Mac the video stays on for the whole step. | *Voice guidance*, *Show demo video for* (Windows) |
 | **Meeting-aware** | If your camera or mic is in use (Teams, Zoom, Meet), you're presenting, or a full-screen app is in front, the break waits and starts 10 s after you're free. The tray says "Break on hold". | *Hold breaks during calls...* |
 | **Hands-off check** | If you keep typing or using the mouse during a break, the countdown pauses with an orange nudge. A break only counts when you actually take it. | *Pause the break timer...* |
 | **Daily check-in** | At the end of the shift, rate eye blur and energy from 1 to 5. Also in the tray menu. | *End-of-shift check-in* |
@@ -135,6 +145,8 @@ powershell -ExecutionPolicy Bypass -File .\comfy\make_media.ps1
 
 ## 6. Building from source
 
+### Windows
+
 Uses `csc.exe` from .NET Framework 4.x, which is already on every Windows 10/11 PC. No Visual Studio needed.
 
 ```powershell
@@ -148,6 +160,18 @@ powershell -ExecutionPolicy Bypass -File .\installer\build_setup.ps1
 ```
 
 This writes `dist\ScreenRest-Setup-<version>.exe` (one-file per-user installer: Start menu shortcut, optional startup and desktop shortcut, entry in Windows Settings > Apps; uninstall runs `ScreenRest.exe --uninstall`) and `dist\ScreenRest-<version>-portable.zip`, and prints SHA-256 checksums. Releases are published on the [Releases page](https://github.com/jsmejia27/ScreenRest/releases).
+
+### macOS
+
+Needs only the Xcode Command Line Tools (`xcode-select --install`), no Xcode project:
+
+```bash
+./mac/build.sh --package
+```
+
+This writes `mac/build/ScreenRest.app` (universal: Apple silicon and Intel) and `dist/ScreenRest-<version>-mac.dmg` and `.zip`, and prints SHA-256 checksums. The GitHub Actions workflow builds only the Windows files, so Mac files are built on a Mac and added to the release by hand. See [mac/README.md](mac/README.md) for how each Windows feature maps to macOS and a list of the Swift source files.
+
+### Windows source files
 
 | File | Purpose |
 |---|---|
@@ -163,6 +187,7 @@ This writes `dist\ScreenRest-Setup-<version>.exe` (one-file per-user installer: 
 | `src\Exercises.cs` | Eye and body exercise library, routine builder |
 | `src\Settings.cs` / `SettingsForm.cs` | Settings model and window |
 | `src\Stats.cs` | Daily statistics, check-in ratings and weekly summary (CSV) |
+| `mac\` | The macOS version (Swift / AppKit): sources, `Info.plist`, `build.sh` |
 | `src\IconFactory.cs` | Draws the app icon in code |
 | `installer\` | Setup program and release packaging script |
 | `store\` | Microsoft Store package: manifest, `build_msix.ps1`, listing text and screenshots |
