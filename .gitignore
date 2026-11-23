@@ -10,3 +10,7 @@
 /comfy/eye_variants/
 /comfy/test_*.json
 /marketing/facebook/
+
+# macOS build output
+/mac/build/
+.DS_Store

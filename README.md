@@ -6,6 +6,8 @@ A free, open-source Windows system-tray app that covers your work shift (8:00–
 
 Runs on Windows 10 and 11 using the .NET Framework 4.x that ships with Windows. No internet, no account, no ads. English and Tagalog.
 
+**macOS:** a native menu bar version for macOS 13 and later (Apple silicon and Intel) is in [`mac/`](mac/README.md). Build it with `./mac/build.sh`.
+
 **[🌐 Website: screenrest.jilbert.net](https://screenrest.jilbert.net/)** · **[⬇ Get the latest release](https://github.com/jsmejia27/ScreenRest/releases/latest)**: installer (`ScreenRest-Setup-x.y.z.exe`) or portable zip.
 
 > The installer isn't code-signed yet, so Windows SmartScreen may say *"Windows protected your PC"*. Click **More info → Run anyway**, check the SHA-256 in the release notes, or [build it yourself](#6-building-from-source).
