@@ -301,9 +301,14 @@ namespace ScreenRest
 
         void EndBreak(BreakKind kind, BreakResult r)
         {
-            foreach (var f in overlays) { if (!f.IsDisposed) { f.Close(); f.Dispose(); } }
-            overlays.Clear();
+            // Runs from the break window's FormClosed event. Calling Close() on that window again from here
+            // raised FormClosed again and recursed until the process died (stack overflow, tray icon gone).
+            // So: run once, empty the list first, and close only the dimmed windows on the other screens.
+            if (!inBreak) return;
             inBreak = false;
+            var others = overlays.ToArray();
+            overlays.Clear();
+            foreach (var f in others) { if (!(f is BreakForm) && !f.IsDisposed) f.Close(); }
 
             int postponeSec = (demo ? 1 : s.PostponeMin) * 60;
             if (kind == BreakKind.Eye)
