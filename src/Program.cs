@@ -18,7 +18,7 @@ namespace ScreenRest
             {
                 if (args[i] == "--demo") demo = true;
                 if (args[i] == "--make-icon" && i + 1 < args.Length) { IconFactory.SaveIco(args[i + 1]); return; }
-                if (args[i] == "--uninstall") { Application.EnableVisualStyles(); Uninstaller.Run(); return; }
+                if (args[i] == "--uninstall") { if (Settings.IsPackaged) return; Application.EnableVisualStyles(); Uninstaller.Run(); return; } // Store copies uninstall through Windows
             }
 
             bool created;

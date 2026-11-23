@@ -1,0 +1,115 @@
+# Builds ScreenRest from source on every push. Signing with SignPath (free for open source) switches on
+# once the repo has the SIGNPATH_API_TOKEN secret and SIGNPATH_ORGANIZATION_ID variable (see CODE_SIGNING.md).
+# Pushing a tag like v1.2.0 also publishes a GitHub Release with the installer, portable zip and Store package.
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed only to publish releases on tags
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      SIGN: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' && github.event_name != 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ScreenRest.exe
+        shell: powershell
+        run: ./build.ps1
+
+      # ---- 1. Sign the app itself (it is embedded in the installer, so it must be signed first) ----
+      - name: Upload unsigned app
+        if: env.SIGN == 'true'
+        id: app-unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-unsigned
+          path: ScreenRest.exe
+
+      - name: Sign app with SignPath
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ScreenRest
+          signing-policy-slug: ${{ startsWith(github.ref, 'refs/tags/v') && 'release-signing' || 'test-signing' }}
+          artifact-configuration-slug: app
+          github-artifact-id: ${{ steps.app-unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed-app
+
+      - name: Use the signed app
+        if: env.SIGN == 'true'
+        shell: powershell
+        run: Copy-Item signed-app/ScreenRest.exe ScreenRest.exe -Force
+
+      # ---- 2. Package the installer and portable zip around the (signed) app, then sign the installer ----
+      - name: Build installer and portable zip
+        shell: powershell
+        run: ./installer/build_setup.ps1
+
+      - name: Upload unsigned installer
+        if: env.SIGN == 'true'
+        id: setup-unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: setup-unsigned
+          path: dist/ScreenRest-Setup-*.exe
+
+      - name: Sign installer with SignPath
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ScreenRest
+          signing-policy-slug: ${{ startsWith(github.ref, 'refs/tags/v') && 'release-signing' || 'test-signing' }}
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.setup-unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed-setup
+
+      - name: Use the signed installer
+        if: env.SIGN == 'true'
+        shell: powershell
+        run: Copy-Item signed-setup/*.exe dist/ -Force
+
+      # ---- 3. Microsoft Store package (the Store signs it on upload) ----
+      - name: Build Store package (MSIX)
+        shell: powershell
+        run: |
+          $a = @{}
+          if ('${{ vars.STORE_IDENTITY_NAME }}') { $a.IdentityName = '${{ vars.STORE_IDENTITY_NAME }}' }
+          if ('${{ vars.STORE_PUBLISHER }}') { $a.Publisher = '${{ vars.STORE_PUBLISHER }}' }
+          ./store/build_msix.ps1 @a
+
+      - name: Checksums
+        shell: powershell
+        run: |
+          Get-ChildItem dist -File | ForEach-Object { '{0}  {1}' -f (Get-FileHash $_.FullName).Hash, $_.Name } | Tee-Object dist/SHA256SUMS.txt
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScreenRest-${{ github.sha }}
+          path: dist/*
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $existing = @(gh release list --limit 100 --json tagName --jq '.[].tagName')
+          if ($existing -notcontains $tag) { gh release create $tag --title "ScreenRest $($tag.TrimStart('v'))" --generate-notes }
+          gh release upload $tag (Get-ChildItem dist -File).FullName --clobber

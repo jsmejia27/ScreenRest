@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SignPath artifact configuration "installer": paste into SignPath > Project ScreenRest > Artifact configurations (slug: installer).
+     The GitHub artifact is a zip that contains ScreenRest-Setup-<version>.exe (the app inside it is already signed). -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="ScreenRest-Setup-*.exe">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

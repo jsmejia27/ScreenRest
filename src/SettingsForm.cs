@@ -100,7 +100,15 @@ namespace ScreenRest
             nBlink = Num(5, 60, s.BlinkEveryMin); Row(L.T("Blink reminder every (min)", "Paalalang kumurap tuwing (min)"), nBlink);
             chkStartup = new CheckBox { Text = L.T("Start ScreenRest when I sign in to Windows",
                 "Buksan ang ScreenRest pag-sign in ko sa Windows"), Checked = Settings.StartupEnabled, AutoSize = true };
-            Row("", chkStartup);
+            if (Settings.IsPackaged)
+            {
+                // Store version: Windows owns the startup entry (manifest StartupTask).
+                var link = new LinkLabel { Text = L.T("Start with Windows: change it in Windows Settings > Apps > Startup",
+                    "Pagbukas kasabay ng Windows: baguhin sa Windows Settings > Apps > Startup"), AutoSize = true };
+                link.LinkClicked += (o, e) => { try { System.Diagnostics.Process.Start("ms-settings:startupapps"); } catch { } };
+                Row("", link);
+            }
+            else Row("", chkStartup);
 
             var btns = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 14, 0, 0) };
             var ok = new Button { Text = L.T("Save", "I-save"), AutoSize = true, Padding = new Padding(10, 2, 10, 2) };

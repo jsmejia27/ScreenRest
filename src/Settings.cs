@@ -144,17 +144,41 @@ namespace ScreenRest
             return d.TryGetValue(k, out v) && bool.TryParse(v, out r) ? r : def;
         }
 
-        // ---- Start with Windows (per-user Run key, no admin needed) ----
+        // ---- Microsoft Store (MSIX) package detection ----
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        static extern int GetCurrentPackageFullName(ref int length, System.Text.StringBuilder name);
+        static int packaged = -1;
+
+        /// <summary>
+        /// True when running from the Microsoft Store (MSIX) package. Windows then owns start-with-Windows
+        /// (the manifest's StartupTask, toggled in Settings > Apps > Startup) and updates/uninstall.
+        /// </summary>
+        public static bool IsPackaged
+        {
+            get
+            {
+                if (packaged < 0)
+                {
+                    try { int len = 0; packaged = GetCurrentPackageFullName(ref len, null) == 15700 ? 0 : 1; } // 15700 = APPMODEL_ERROR_NO_PACKAGE
+                    catch { packaged = 0; } // no package APIs on this Windows
+                }
+                return packaged == 1;
+            }
+        }
+
+        // ---- Start with Windows (per-user Run key, no admin needed; not used by the Store package) ----
         const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
         public static bool StartupEnabled
         {
             get
             {
+                if (IsPackaged) return false;
                 using (var k = Registry.CurrentUser.OpenSubKey(RunKey))
                     return k != null && k.GetValue("ScreenRest") != null;
             }
             set
             {
+                if (IsPackaged) return;
                 using (var k = Registry.CurrentUser.OpenSubKey(RunKey, true))
                 {
                     if (k == null) return;
