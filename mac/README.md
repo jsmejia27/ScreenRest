@@ -1,0 +1,61 @@
+# ScreenRest for macOS
+
+A native port of ScreenRest (Swift + AppKit) for macOS 13 Ventura and later, on Apple silicon and Intel. It lives in the menu bar and has the same features as the Windows app: eye and stretch breaks with video and voice, shift schedule and lunch, idle detection, holding breaks during calls, the hands-off check, strict mode, daily check-in, health trend, weekly summary, English and Tagalog.
+
+## Build
+
+Only the Xcode Command Line Tools are needed (`xcode-select --install`), no Xcode project.
+
+```bash
+./mac/build.sh
+```
+
+This writes `mac/build/ScreenRest.app`, a universal binary with the exercise videos and voice-overs from `media/` bundled inside. Drag it to `/Applications` and open it.
+
+```bash
+./mac/build.sh --package
+```
+
+This also writes `dist/ScreenRest-<version>-mac.zip` and `.dmg` and prints their SHA-256 checksums. For a quicker one-architecture build while developing, set `ARCHS=arm64`.
+
+The app is signed ad hoc, not notarized. A copy downloaded from the internet will be blocked by Gatekeeper the first time it opens. Right-click the app, choose **Open**, then **Open** again, or allow it under System Settings > Privacy & Security.
+
+## Try it
+
+```bash
+open mac/build/ScreenRest.app --args --demo
+```
+
+Demo mode gives an eye break every 30 s and a stretch break every 90 s, ignores shift hours, and keeps its own `stats-demo.csv`.
+
+`ScreenRest --snapshot <dir> [en|tl]` (the binary inside `Contents/MacOS`) renders every window to PNG without showing anything on screen. It's useful for screenshots and layout checks.
+
+## How the Windows features map to macOS
+
+| Windows | macOS |
+|---|---|
+| System-tray icon, balloon tips | Menu bar icon (teal / grey / orange) and notifications. If notifications are off for ScreenRest, a small toast shows under the menu bar instead. |
+| `GetLastInputInfo` idle time | `CGEventSource` seconds since last input. No permission needed. |
+| Camera/mic in use (registry ConsentStore) | CoreMediaIO "device running somewhere" for the camera. CoreAudio per-process input for the mic (macOS 14.2+), or input-only devices on older versions. No camera or mic access is requested. |
+| Presentation / full-screen app | The frontmost app has a window that covers a whole display (slideshows, full-screen video and games). |
+| Full-screen break on every monitor | Borderless windows above everything, the menu bar and full-screen Spaces included. Strict mode also blocks Cmd-Tab during the break. |
+| Start with Windows (Run key) | Open at login (`SMAppService`, listed in System Settings > General > Login Items) |
+| `%APPDATA%\ScreenRest\` | `~/Library/Application Support/ScreenRest/`, same `settings.ini` and `stats.csv` format, so files can be copied between the two |
+| Uninstaller | Drag the app to the Trash. Delete the folder above to remove your data. |
+
+## Source files
+
+| File | Purpose |
+|---|---|
+| `Sources/main.swift` | Entry point, single instance, `--demo` / `--make-iconset` / `--snapshot` |
+| `Sources/StatusApp.swift` | Menu bar item, menu, shift schedule, timers, idle detection (port of `TrayApp.cs`) |
+| `Sources/BreakWindow.swift` | Full-screen guided break: video, voice, hands-off check, dim overlay for other screens |
+| `Sources/Native.swift` | Idle time; camera, mic and full-screen detection |
+| `Sources/SettingsWindow.swift` | Settings window |
+| `Sources/HealthWindows.swift` | Daily check-in, reports, 30-day trend chart |
+| `Sources/AppWindows.swift` | Welcome and About windows |
+| `Sources/Notifier.swift` | Notifications with toast fallback |
+| `Sources/Settings.swift`, `Stats.swift`, `Exercises.swift`, `Lang.swift` | Same models as the Windows app |
+| `Sources/IconFactory.swift` | Draws the menu bar icon and app icon in code |
+| `Sources/UI.swift`, `Snapshot.swift` | AppKit helpers; offscreen rendering |
+| `Info.plist`, `build.sh` | Bundle metadata and build script |
