@@ -148,10 +148,16 @@ namespace ScreenRest
                 "Naghihintay ang break habang nasa tawag o nagpe-present ka. Lahat ay nananatili sa PC na ito."), Dim, 10));
             if (L.Tl) Body.Controls.Add(Para("Paalala: ang gabay na boses ay nasa English pa.", Dim, 10));
 
-            var startup = new CheckBox { Text = L.T("Start ScreenRest when I sign in to Windows", "Buksan ang ScreenRest pag-sign in ko sa Windows"),
-                Checked = startupChecked, AutoSize = true, ForeColor = Soft, Margin = new Padding(0, 4, 0, 0) };
-            startup.CheckedChanged += (o, e) => startupChecked = startup.Checked;
-            Body.Controls.Add(startup);
+            if (Settings.IsPackaged)
+                Body.Controls.Add(Para(L.T("ScreenRest starts with Windows. To change that, go to Windows Settings > Apps > Startup.",
+                    "Kasabay ng Windows nagbubukas ang ScreenRest. Para baguhin, pumunta sa Windows Settings > Apps > Startup."), Dim, 0));
+            else
+            {
+                var startup = new CheckBox { Text = L.T("Start ScreenRest when I sign in to Windows", "Buksan ang ScreenRest pag-sign in ko sa Windows"),
+                    Checked = startupChecked, AutoSize = true, ForeColor = Soft, Margin = new Padding(0, 4, 0, 0) };
+                startup.CheckedChanged += (o, e) => startupChecked = startup.Checked;
+                Body.Controls.Add(startup);
+            }
 
             var row = ButtonRow();
             var go = MakeButton(L.T("Get started", "Simulan na"), true);
@@ -219,8 +225,8 @@ namespace ScreenRest
                 "ScreenRest is a wellness reminder, not medical advice. If your vision stays blurry, see an optometrist.",
                 "Ang ScreenRest ay paalala para sa kalusugan, hindi payong medikal. Kung patuloy na malabo ang paningin mo, magpatingin sa optometrist."), Dim, 12));
             Body.Controls.Add(Para(Copyright, Soft, 4));
-            Body.Controls.Add(Para(L.T("Free to use. Please don't resell or redistribute modified copies.",
-                "Libreng gamitin. Huwag ibenta o ipamahagi ang binagong kopya."), Dim, 4));
+            Body.Controls.Add(Para(L.T("Free and open source. Code: github.com/jsmejia27/ScreenRest",
+                "Libre at open source. Code: github.com/jsmejia27/ScreenRest"), Dim, 4));
 
             var row = ButtonRow();
             var ok = MakeButton(L.T("Close", "Isara"), true);

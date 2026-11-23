@@ -11,7 +11,7 @@ using Microsoft.Win32;
 [assembly: AssemblyProduct("ScreenRest")]
 [assembly: AssemblyDescription("Installs ScreenRest for the current user")]
 [assembly: AssemblyCompany("Jilbert Mejia")]
-[assembly: AssemblyCopyright("© 2026 Jilbert Mejia. All rights reserved.")]
+[assembly: AssemblyCopyright("© 2026 Jilbert Mejia. MIT License.")]
 [assembly: AssemblyVersion("1.1.0.0")]
 [assembly: AssemblyFileVersion("1.1.0.0")]
 
@@ -93,7 +93,7 @@ namespace ScreenRest.Setup
             btnInstall.Click += (o, e) => { if (done) Close(); else DoInstall(); };
             btnCancel.Click += (o, e) => Close();
 
-            var copy = new Label { Text = "© 2026 Jilbert Mejia. All rights reserved.", ForeColor = Dim, AutoSize = true,
+            var copy = new Label { Text = "© 2026 Jilbert Mejia. MIT License.", ForeColor = Dim, AutoSize = true,
                                    Location = new Point(32, 406), Font = new Font("Segoe UI", 8.5f) };
 
             Controls.AddRange(new Control[] { logo, title, sub, info, where, chkStartup, chkDesktop, chkLaunch, progress, status, btnInstall, btnCancel, copy });

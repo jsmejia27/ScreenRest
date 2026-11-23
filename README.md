@@ -163,7 +163,18 @@ This writes `dist\ScreenRest-Setup-<version>.exe` (one-file per-user installer: 
 | `src\Stats.cs` | Daily statistics, check-in ratings and weekly summary (CSV) |
 | `src\IconFactory.cs` | Draws the app icon in code |
 | `installer\` | Setup program and release packaging script |
+| `store\` | Microsoft Store package: manifest, `build_msix.ps1`, listing text and screenshots |
+| `.github\workflows\build.yml` | Builds everything on GitHub, signs it with SignPath, publishes releases on `v*` tags |
 | `website\` | Static download site (`index.html`, `assets\`) |
+
+### Signing and the Microsoft Store
+
+- **Signed downloads (SignPath, free for open source):** GitHub Actions builds the app from this repository and sends it to SignPath for signing. See [CODE_SIGNING.md](CODE_SIGNING.md) for the policy and setup. Until SignPath approves the project, the workflow still builds everything, just unsigned.
+- **Microsoft Store:** `store\build_msix.ps1` makes `dist\ScreenRest-<version>.msix`. Microsoft signs it when it's published. Pass the three Product identity values from Partner Center (or set the repo variables `STORE_IDENTITY_NAME` and `STORE_PUBLISHER` so the GitHub build uses them). Listing text in English and Filipino is in [store/LISTING.md](store/LISTING.md). The Store version starts with Windows through the manifest's startup task, which users manage in Windows Settings > Apps > Startup.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\store\build_msix.ps1 -IdentityName "<Package/Identity/Name>" -Publisher "<Package/Identity/Publisher>"
+```
 
 ## 7. Website
 

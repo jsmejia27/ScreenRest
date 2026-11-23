@@ -23,8 +23,8 @@ Try it fast:  ScreenRest.exe --demo   (eye break every 30 s, stretch break every
 Your settings and history are stored in %APPDATA%\ScreenRest. Nothing is sent anywhere.
 Language: English or Tagalog (Settings > Language / Wika). Voice guidance is in English.
 
-Copyright (c) 2026 Jilbert Mejia. All rights reserved.
-Free to use. Please don't resell or redistribute modified copies.
+Copyright (c) 2026 Jilbert Mejia. Released under the MIT License (see LICENSE).
+Free and open source: https://github.com/jsmejia27/ScreenRest
 "@ | Set-Content "$stage\ScreenRest\Read me.txt" -Encoding ASCII
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
