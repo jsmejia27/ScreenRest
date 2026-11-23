@@ -3,8 +3,11 @@
 **Category:** Health & fitness · **Price:** Free · **Markets:** all · **Age rating:** answer the questionnaire (no user content, no ads) → expected 3+
 **Privacy policy URL:** https://github.com/jsmejia27/ScreenRest/blob/main/CODE_SIGNING.md#privacy
 **Website:** https://screenrest.jilbert.net · **Support:** https://github.com/jsmejia27/ScreenRest/issues
-**Screenshots (PNG, 1366×768 or larger):** store/screenshots/ (en_* for English, tl_* for Filipino)
-**Restricted capability note (runFullTrust):** "ScreenRest is a classic Windows desktop (WinForms) tray app packaged with MSIX. It needs full trust to show full-screen break reminders over other windows, read keyboard/mouse idle time, and detect when the camera or microphone is in use so breaks wait during calls."
+**Reserved name:** Screen Rest · **Store ID:** 9P8LKK7JSWW9 · **Store link:** https://apps.microsoft.com/detail/9P8LKK7JSWW9
+**Screenshots (1920×1080):** store/screenshots/store_en_*.png (English), store_tl_*.png (Filipino), made by make_screenshots.ps1 [-Lang en|tl]
+**Images (store/logos, made by make_poster.ps1):** 16:9 Windows and Xbox image ScreenRest-hero-3840x2160.png · 2:3 poster ScreenRest-poster-1440x2160.png · 1:1 box art ScreenRest-boxart-2160x2160.png
+**Trailer (store/trailer, made by make_trailer.ps1):** ScreenRest-trailer.mp4 + ScreenRest-trailer-thumbnail.png. Title: "ScreenRest: rest your eyes, move your body" / "ScreenRest: ipahinga ang mata, igalaw ang katawan"
+**Restricted capability note (runFullTrust):** "ScreenRest is a Win32 desktop app (WinForms) packaged with MSIX, so it needs runFullTrust to run. It's a tray break reminder that shows full-screen break windows, pauses when the user is idle, and skips breaks during calls. No network access; all data stays on the PC. Open source: github.com/jsmejia27/ScreenRest"
 
 ---
 

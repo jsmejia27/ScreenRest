@@ -13,7 +13,7 @@
   <Identity Name="$IDENTITY_NAME$" Publisher="$PUBLISHER$" Version="$VERSION$" ProcessorArchitecture="neutral" />
 
   <Properties>
-    <DisplayName>ScreenRest</DisplayName>
+    <DisplayName>$DISPLAY_NAME$</DisplayName>
     <PublisherDisplayName>$PUBLISHER_DISPLAY_NAME$</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
     <Description>Eye and stretch break coach for desk workers.</Description>
@@ -35,7 +35,7 @@
   <Applications>
     <Application Id="ScreenRest" Executable="ScreenRest.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="ScreenRest"
+        DisplayName="$DISPLAY_NAME$"
         Description="Rest your eyes and move your body during the workday."
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"

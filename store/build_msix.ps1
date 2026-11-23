@@ -8,9 +8,10 @@
 # Copy the three values from Partner Center > ScreenRest > Product management > Product identity.
 # Needs the Windows 10/11 SDK (makeappx.exe, makepri.exe); GitHub's windows-latest runners have it.
 param(
-    [string]$IdentityName = 'JilbertMejia.ScreenRest',      # placeholder: replace with Package/Identity/Name
-    [string]$Publisher = 'CN=ScreenRest-Local-Test',        # placeholder: replace with Package/Identity/Publisher
+    [string]$IdentityName = 'JilbertMejia.ScreenRest',                        # Partner Center Package/Identity/Name
+    [string]$Publisher = 'CN=00C900CC-F35C-4C16-9405-B56FB235DF61',           # Partner Center Package/Identity/Publisher
     [string]$PublisherDisplayName = 'Jilbert Mejia',
+    [string]$DisplayName = 'Screen Rest',                   # must match the name reserved in Partner Center exactly
     [string]$Version                                        # defaults to the exe's version, e.g. 1.1.0.0
 )
 $ErrorActionPreference = 'Stop'
@@ -63,7 +64,8 @@ foreach ($t in 16, 24, 32, 48, 256) {
 $manifest = Get-Content (Join-Path $PSScriptRoot 'AppxManifest.xml') -Raw
 $esc = { param($s) [Security.SecurityElement]::Escape($s) }
 $manifest = $manifest.Replace('$IDENTITY_NAME$', (& $esc $IdentityName)).Replace('$PUBLISHER$', (& $esc $Publisher)).
-    Replace('$PUBLISHER_DISPLAY_NAME$', (& $esc $PublisherDisplayName)).Replace('$VERSION$', $Version)
+    Replace('$PUBLISHER_DISPLAY_NAME$', (& $esc $PublisherDisplayName)).Replace('$DISPLAY_NAME$', (& $esc $DisplayName)).
+    Replace('$VERSION$', $Version)
 [IO.File]::WriteAllText((Join-Path $layout 'AppxManifest.xml'), $manifest, (New-Object Text.UTF8Encoding $false))
 
 # ---- Resource index (lets Windows pick the right icon size), then the package ----
