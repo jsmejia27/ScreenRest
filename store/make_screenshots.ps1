@@ -7,15 +7,19 @@ $cap = @{
     en = @(
         @('Rest your eyes every 20 minutes', 'The 20-20-20 rule, with a short guided exercise'),
         @('Stand up and stretch every hour', 'Short video demos for your neck, shoulders, back and legs'),
-        @('Ready in one click', 'English or Tagalog. No account, no ads, no internet needed'),
+        @('See what is working', 'A Dashboard with your break score, screen time and insights from your own history'),
+        @('A one-page report for your eye doctor', '30 days of breaks, screen time and eye-blur ratings, saved as a PDF'),
         @('Fits your workday', 'Your shift, work days and lunch hour. Waits while you are on a call'),
-        @('Track how your eyes feel', 'A quick daily check-in and a 30-day trend for your optometrist'))
+        @('Track how your eyes feel', 'A quick check-in at the end of your shift, right in your Dashboard'),
+        @('Ready in one click', 'English or Tagalog. No account, no ads, no internet needed'))
     tl = @(
         @('Ipahinga ang mata tuwing 20 minuto', 'Ang 20-20-20 rule, may maikling gabay na ehersisyo'),
         @('Tumayo at mag-stretch kada oras', 'Maiikling video para sa leeg, balikat, likod at binti'),
-        @('Handa sa isang click', 'English o Tagalog. Walang account, walang ads, walang internet'),
+        @('Tingnan kung ano ang epektibo', 'Dashboard na may break score, oras sa screen at payo mula sa sarili mong kasaysayan'),
+        @('Isang pahinang ulat para sa doktor ng mata', '30 araw ng breaks, oras sa screen at labo ng mata, naka-PDF'),
         @('Akma sa iyong araw ng trabaho', 'Shift, araw ng trabaho at tanghalian. Naghihintay habang nasa tawag ka'),
-        @('Alamin ang pakiramdam ng iyong mata', 'Mabilis na check-in araw-araw at 30-araw na trend para sa optometrist'))
+        @('Alamin ang pakiramdam ng iyong mata', 'Mabilis na check-in pagkatapos ng shift, kasama sa Dashboard'),
+        @('Handa sa isang click', 'English o Tagalog. Walang account, walang ads, walang internet'))
 }[$Lang]
 Add-Type -AssemblyName System.Drawing, System.Windows.Forms
 $root = Split-Path $PSScriptRoot -Parent
@@ -96,9 +100,73 @@ Compose (GrabBreak 'Eye' ($ex.GetMethod('EyeBreak').Invoke($null, [object[]]@(20
     $cap[0][0] $cap[0][1] "store_${Lang}_1_eye.png" 1.0
 Compose (GrabBreak 'Stretch' ($ex.GetMethod('StretchRoutine').Invoke($null, [object[]]@(300))) 1) `
     $cap[1][0] $cap[1][1] "store_${Lang}_2_stretch.png" 1.0
-Compose (GrabDialog ([Activator]::CreateInstance((Ty 'WelcomeForm'), [object[]]@($s)))) `
-    $cap[2][0] $cap[2][1] "store_${Lang}_3_welcome.png" 1.4
+
+# Dashboard and PDF report from made-up history in the --demo files (stats-demo.csv, breaks-demo.csv).
+# Any existing demo files are backed up and put back; the real stats.csv and breaks.csv are never touched.
+$dataDir = Join-Path $env:APPDATA 'ScreenRest'
+New-Item -ItemType Directory -Force $dataDir | Out-Null
+$demoFiles = 'stats-demo.csv', 'breaks-demo.csv'
+$backup = @{}
+foreach ($f in $demoFiles) { $p = Join-Path $dataDir $f; if (Test-Path $p) { $backup[$f] = [IO.File]::ReadAllBytes($p) } }
+try {
+    (Ty 'DayStats').GetField('DemoMode').SetValue($null, $true)
+    # 60 days of weekday history that improves over time (so the Dashboard can compare with the 30 days before);
+    # mid-afternoon breaks are skipped more often
+    $rnd = New-Object Random 7
+    $stats = @('date,eye_taken,eye_skipped,stretch_taken,stretch_skipped,postponed,active_sec,eye_blur,energy')
+    $breaks = @('time,kind,result,planned_sec,taken_sec,paused_sec')
+    for ($i = 59; $i -ge 0; $i--) {
+        $d = [datetime]::Today.AddDays(-$i)
+        if ($d.DayOfWeek -eq 'Saturday' -or $d.DayOfWeek -eq 'Sunday') { continue }
+        $t = (59 - $i) / 59
+        $good = 0.45 + 0.5 * $t
+        $et = 0; $es = 0; $st = 0; $ss = 0
+        foreach ($hour in 8..16) {   # not $h: PowerShell names ignore case, and $H is the image height
+            if ($hour -eq 12) { continue }
+            foreach ($m in 20, 40) {
+                $skip = ($rnd.NextDouble() -gt $good) -or ($hour -eq 15 -and $rnd.NextDouble() -gt 0.4)
+                if ($skip) { $es++; $res = 'skipped'; $tk = 3 } else { $et++; $res = 'completed'; $tk = 20 }
+                $breaks += ('{0:yyyy-MM-ddTHH:mm:ss},eye,{1},20,{2},0' -f $d.AddHours($hour).AddMinutes($m), $res, $tk)
+            }
+            if ($rnd.NextDouble() -gt ($good - 0.1)) { $ss++; $res = 'skipped'; $tk = 10 } else { $st++; $res = 'completed'; $tk = 300 }
+            $breaks += ('{0:yyyy-MM-ddTHH:mm:ss},stretch,{1},300,{2},4' -f $d.AddHours($hour).AddMinutes(59), $res, $tk)
+        }
+        $blur = [Math]::Max(1, [Math]::Min(5, [int][Math]::Round(4.3 - 2.6 * $t + $rnd.Next(-1, 2) * 0.5)))
+        $energy = [Math]::Max(1, [Math]::Min(5, [int][Math]::Round(1.8 + 2.7 * $t + $rnd.Next(-1, 2) * 0.5)))
+        $stats += ('{0:yyyy-MM-dd},{1},{2},{3},{4},{5},{6},{7},{8}' -f $d, $et, $es, $st, $ss, $rnd.Next(0, 4), (26000 + $rnd.Next(0, 4000)), $blur, $energy)
+    }
+    [IO.File]::WriteAllLines((Join-Path $dataDir 'stats-demo.csv'), [string[]]$stats)
+    [IO.File]::WriteAllLines((Join-Path $dataDir 'breaks-demo.csv'), [string[]]$breaks)
+
+    $todayFunc = [Delegate]::CreateDelegate([Func``1].MakeGenericType((Ty 'DayStats')), (Ty 'DayStats').GetMethod('LoadToday'))
+    $yes = [Func[bool]] { $true }
+
+    # Dashboard, 30 days, without the "demo stats" note in its header
+    $dash = [Activator]::CreateInstance((Ty 'DashboardForm'), [object[]]@(30, $todayFunc, $yes, [Action] {}))
+    $dash.StartPosition = 'Manual'; $dash.Location = New-Object System.Drawing.Point -6000, -6000
+    $dash.Size = New-Object System.Drawing.Size 1060, 1075
+    ShowForm $dash; $dash.ShowRange(30); Pump
+    $stack = New-Object System.Collections.Stack; $stack.Push($dash)
+    while ($stack.Count) { $c = $stack.Pop(); foreach ($ch in $c.Controls) { $stack.Push($ch); if ($ch -is [System.Windows.Forms.Label]) { $ch.Text = $ch.Text.Replace(' ' + [char]0xB7 + ' demo stats', '') } } }
+    Pump
+    $shot = Grab $dash $dash.Width $dash.Height; $dash.Close()
+    Compose $shot $cap[2][0] $cap[2][1] "store_${Lang}_3_dashboard.png" 1.0
+
+    # PDF report page (rendered as the PDF is), top part so the charts can be shown larger
+    Compose (CropTop ((Ty 'ReportPdf').GetMethod('Render').Invoke($null, [object[]]@($todayFunc, 120))) 0.62) `
+        $cap[3][0] $cap[3][1] "store_${Lang}_4_report.png" 1.0
+}
+finally {
+    (Ty 'DayStats').GetField('DemoMode').SetValue($null, $false)
+    foreach ($f in $demoFiles) {
+        $p = Join-Path $dataDir $f
+        if ($backup.ContainsKey($f)) { [IO.File]::WriteAllBytes($p, $backup[$f]) } elseif (Test-Path $p) { Remove-Item $p }
+    }
+}
+
 Compose (CropTop (GrabDialog ([Activator]::CreateInstance((Ty 'SettingsForm'), [object[]]@($s)))) 0.645) `
-    $cap[3][0] $cap[3][1] "store_${Lang}_4_settings.png" 1.4
+    $cap[4][0] $cap[4][1] "store_${Lang}_5_settings.png" 1.4
 Compose (GrabDialog ([Activator]::CreateInstance((Ty 'CheckInForm'), [object[]]@($day)))) `
-    $cap[4][0] $cap[4][1] "store_${Lang}_5_checkin.png" 1.6
+    $cap[5][0] $cap[5][1] "store_${Lang}_6_checkin.png" 1.6
+Compose (GrabDialog ([Activator]::CreateInstance((Ty 'WelcomeForm'), [object[]]@($s)))) `
+    $cap[6][0] $cap[6][1] "store_${Lang}_7_welcome.png" 1.4
