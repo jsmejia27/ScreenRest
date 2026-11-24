@@ -5,6 +5,16 @@
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $ver  = '1.1.1'
+# VERSION=1.2.0 (CI passes it from a v* tag) overrides the version above and in Setup.cs for this build only.
+$setupSrc = Join-Path $PSScriptRoot 'Setup.cs'
+if ($env:VERSION) {
+    if ($env:VERSION -notmatch '^\d+\.\d+\.\d+$') { throw "VERSION must look like 1.2.0, got '$env:VERSION'." }
+    $ver = $env:VERSION
+    $text = [IO.File]::ReadAllText($setupSrc) -replace '"\d+\.\d+\.\d+\.0"', "`"$ver.0`"" `
+                                              -replace 'Version = "\d+\.\d+\.\d+"', "Version = `"$ver`""
+    $setupSrc = Join-Path $env:TEMP ('ScreenRest_Setup_' + [guid]::NewGuid().ToString('N') + '.cs')
+    [IO.File]::WriteAllText($setupSrc, $text, (New-Object Text.UTF8Encoding $true))
+}
 $csc  = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $fw   = Split-Path $csc
 $dist = Join-Path $root 'dist'
@@ -39,8 +49,9 @@ if (Test-Path $portable) { Remove-Item $portable }
 $setup = Join-Path $dist "ScreenRest-Setup-$ver.exe"
 & $csc /nologo /optimize+ /target:winexe /platform:anycpu "/out:$setup" "/win32icon:$(Join-Path $root 'ScreenRest.ico')" `
     "/resource:$payload,payload.zip" /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll `
-    "/r:$fw\System.IO.Compression.dll" (Join-Path $PSScriptRoot 'Setup.cs') (Join-Path $root 'src\IconFactory.cs')
+    "/r:$fw\System.IO.Compression.dll" $setupSrc (Join-Path $root 'src\IconFactory.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Setup compile failed' }
+if ($env:VERSION) { Remove-Item $setupSrc -ErrorAction SilentlyContinue }
 Remove-Item $stage -Recurse -Force
 
 Get-ChildItem $dist | ForEach-Object { '{0,-36} {1,6:N1} MB  SHA256 {2}' -f $_.Name, ($_.Length / 1MB), (Get-FileHash $_.FullName).Hash }

@@ -26,8 +26,8 @@ No internet, no account, no ads. English and Tagalog. Both versions have the sam
 | Eye break | Stretch break |
 |---|---|
 | <img src="website/assets/shots/eye.webp" alt="Eye break screen: look far away for 20 seconds"> | <img src="website/assets/shots/stretch.webp" alt="Guided stretch break screen"> |
-| **Settings** | **Health trend** |
-| <img src="website/assets/shots/settings.webp" alt="Settings window"> | <img src="website/assets/shots/trend.webp" alt="30-day health trend chart"> |
+| **Settings** | **Dashboard** |
+| <img src="website/assets/shots/settings.webp" alt="Settings window"> | <img src="website/assets/shots/dashboard.webp" alt="Windows Dashboard: break score, screen time, breaks per day, check-in ratings, time of day and insights"> |
 
 **macOS**
 
@@ -107,7 +107,7 @@ Over a full day that comes to about **20 eye breaks and 7 stretch breaks**.
 2. Right-click the icon on Windows, or click it on a Mac:
    - **Take an eye break / stretch break now**
    - **Pause reminders** for a meeting or presentation (30 min, 1 h, 2 h, rest of today)
-   - **Today's stats**, also opened by double-clicking the icon
+   - **Dashboard...**: today, the last 7 or 30 days, insights and a PDF for your eye doctor. On Windows, double-clicking the icon opens it too.
    - **Settings...** to change shift hours, intervals, strict mode, sounds and blink nudges
    - Tick **Start ScreenRest when I sign in to Windows** (Mac: **Open ScreenRest when I log in to my Mac**) in Settings so it covers every shift automatically.
 3. During a break: **Esc** skips and **Postpone 5 min** delays. Both disappear in strict mode.
@@ -118,7 +118,7 @@ Icon colours: **teal** = tracking, **grey** = paused or off shift, **orange** = 
 
 **Language:** English or Tagalog, picked on the welcome screen or in Settings → *Language / Wika*. All screens, exercises and summaries switch; the voice-overs stay in English.
 
-Files are kept in `%APPDATA%\ScreenRest\` on Windows and `~/Library/Application Support/ScreenRest/` on a Mac: `settings.ini` and `stats.csv` (one row per day, including your check-in ratings; opens in Excel or Numbers). The format is the same on both, so you can copy your history across. Nothing leaves your computer.
+Files are kept in `%APPDATA%\ScreenRest\` on Windows and `~/Library/Application Support/ScreenRest/` on a Mac: `settings.ini`, `stats.csv` (one row per day, including your check-in ratings; opens in Excel or Numbers) and `breaks.csv` (one row per break, with its time and whether you took it). The format is the same on both, so you can copy your history across. Nothing leaves your computer.
 
 ## 4. Smart features
 
@@ -128,10 +128,12 @@ Files are kept in `%APPDATA%\ScreenRest\` on Windows and `~/Library/Application 
 | **Meeting-aware** | If your camera or mic is in use (Teams, Zoom, Meet), you're presenting, or a full-screen app is in front, the break waits and starts 10 s after you're free. The tray says "Break on hold". | *Hold breaks during calls...* |
 | **Hands-off check** | If you keep typing or using the mouse during a break, the countdown pauses with an orange nudge. A break only counts when you actually take it. | *Pause the break timer...* |
 | **Daily check-in** | At the end of the shift, rate eye blur and energy from 1 to 5. Also in the tray menu. | *End-of-shift check-in* |
-| **Health trend** | Tray → *Health trend*: a 30-day chart of eye blur, energy and break score, handy to show your optometrist. | |
-| **Weekly summary** | Shown after the check-in on your last work day (Friday): this week vs last week. Also in the tray menu. | |
+| **Dashboard** | Today, 7 or 30 days at a glance: break score, screen time, eye and stretch breaks compared with the period before, charts of breaks per day, check-in ratings and the time of day you take or skip breaks, and up to four short insights from your own history. It opens on the last 7 days after the check-in on your last work day (Friday). | |
+| **PDF for your eye doctor** | Dashboard → *Export PDF*: one A4 page with 30 days of breaks, screen time and eye-blur and energy ratings, and a note on how to read them. | |
+| **Countdown on the icon** | Optional: the tray (Windows) or menu bar (Mac) icon shows the minutes to your next break. | *Show minutes to the next break...* |
+| **Calendar** (Mac) | Optional: breaks wait during meetings in your calendar, and a stretch break due during one moves to just before it. | *Use my calendar* |
 
-Demo mode (`--demo`) keeps its own `stats-demo.csv`, so test runs never touch your real history.
+Demo mode (`--demo`) keeps its own `stats-demo.csv` and `breaks-demo.csv`, so test runs never touch your real history.
 
 ## 5. Exercise videos and voice-overs
 
@@ -167,7 +169,7 @@ To package a release (after `build.ps1`):
 powershell -ExecutionPolicy Bypass -File .\installer\build_setup.ps1
 ```
 
-This writes `dist\ScreenRest-Setup-<version>.exe` (one-file per-user installer: Start menu shortcut, optional startup and desktop shortcut, entry in Windows Settings > Apps; uninstall runs `ScreenRest.exe --uninstall`) and `dist\ScreenRest-<version>-portable.zip`, and prints SHA-256 checksums. Releases are published on the [Releases page](https://github.com/jsmejia27/ScreenRest/releases).
+This writes `dist\ScreenRest-Setup-<version>.exe` (one-file per-user installer: Start menu shortcut, optional startup and desktop shortcut, entry in Windows Settings > Apps; uninstall runs `ScreenRest.exe --uninstall`) and `dist\ScreenRest-<version>-portable.zip`, and prints SHA-256 checksums. Set `$env:VERSION = '1.2.0'` first to build a different version number without editing the source; CI does this from the `v*` tag. Releases are published on the [Releases page](https://github.com/jsmejia27/ScreenRest/releases).
 
 ### macOS
 
@@ -177,7 +179,7 @@ Needs only the Xcode Command Line Tools (`xcode-select --install`), no Xcode pro
 ./mac/build.sh --package
 ```
 
-This writes `mac/build/ScreenRest.app` (universal: Apple silicon and Intel) and `dist/ScreenRest-<version>-mac.dmg` and `.zip`, and prints SHA-256 checksums. The GitHub Actions workflow builds only the Windows files, so Mac files are built on a Mac and added to the release by hand. See [mac/README.md](mac/README.md) for how each Windows feature maps to macOS and a list of the Swift source files.
+This writes `mac/build/ScreenRest.app` (universal: Apple silicon and Intel) and `dist/ScreenRest-<version>-mac.dmg` and `.zip`, and prints SHA-256 checksums. The GitHub Actions workflow builds the Mac files on a Mac runner too, and a `v*` tag publishes them in the same release as the Windows files. See [mac/README.md](mac/README.md) for how each Windows feature maps to macOS and a list of the Swift source files.
 
 ### Windows source files
 
@@ -187,14 +189,17 @@ This writes `mac/build/ScreenRest.app` (universal: Apple silicon and Intel) and 
 | `src\TrayApp.cs` | Tray icon, menu, shift schedule, timers, idle detection |
 | `src\BreakForm.cs` | Full-screen guided break: video, voice, hands-off check, dim overlay for other monitors |
 | `src\Native.cs` | Idle time, and call/presentation/full-screen detection |
-| `src\HealthForms.cs` | Daily check-in, health trend chart, report windows |
+| `src\HealthForms.cs` | Daily check-in |
+| `src\Dashboard.cs` | Dashboard window: summary cards, charts and insights (same rules as the Mac app) |
+| `src\ReportPdf.cs` | One-page PDF for your eye doctor, written without any PDF library |
+| `src\BreakLog.cs` | `breaks.csv`: time, type and result of every break (feeds the time-of-day chart and insight) |
 | `src\AppForms.cs` | First-run welcome and About windows |
 | `src\Uninstaller.cs` | `--uninstall`: removes shortcuts, startup and Apps entries, optionally your data |
 | `src\AssemblyInfo.cs` | Version, product info and copyright |
 | `src\Lang.cs` | English / Tagalog switch: every UI string is written as `L.T("English", "Tagalog")` |
 | `src\Exercises.cs` | Eye and body exercise library, routine builder |
 | `src\Settings.cs` / `SettingsForm.cs` | Settings model and window |
-| `src\Stats.cs` | Daily statistics, check-in ratings and weekly summary (CSV) |
+| `src\Stats.cs` | Daily statistics and check-in ratings (`stats.csv`) |
 | `mac\` | The macOS version (Swift / AppKit): sources, `Info.plist`, `build.sh` |
 | `src\IconFactory.cs` | Draws the app icon in code |
 | `installer\` | Setup program and release packaging script |

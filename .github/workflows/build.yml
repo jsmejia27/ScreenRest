@@ -23,6 +23,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Version from the tag
+        shell: powershell
+        run: |
+          # A v1.2.0 tag builds version 1.2.0 (exe, installer and Store package); other builds keep the version in the source.
+          if ($env:GITHUB_REF -like 'refs/tags/v*') { [IO.File]::AppendAllText($env:GITHUB_ENV, "VERSION=$($env:GITHUB_REF_NAME.Substring(1))`n") }
+
       - name: Build ScreenRest.exe
         shell: powershell
         run: ./build.ps1

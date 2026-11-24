@@ -23,7 +23,7 @@ ScreenRest is a free break coach for people who work at a screen all day.
 • A 5-minute stretch break every hour: stand up, follow short video demos for your neck, shoulders, back and legs, then walk and drink water.
 • Calm voice guidance, so your eyes can leave the screen.
 • Follows your shift, work days and lunch hour. Waits while you're on a call or presenting.
-• Daily check-in for eye blur and energy, with a 30-day trend chart to show your optometrist.
+• Daily check-in for eye blur and energy, a Dashboard with insights from your own history, and a one-page PDF to show your optometrist.
 • English or Tagalog interface.
 • Private: no account, no ads, no internet connection. Open source (MIT).
 
@@ -33,7 +33,7 @@ ScreenRest is a wellness reminder, not medical advice.
 20-20-20 eye breaks with guided exercises
 Hourly stand-up and stretch routines with video and voice
 Works around your shift, lunch and meetings
-Daily check-in and 30-day health trend
+Dashboard, insights and a PDF for your eye doctor
 English and Tagalog
 No account, no ads, works offline
 

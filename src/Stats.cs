@@ -29,6 +29,7 @@ namespace ScreenRest
             }
         }
         public bool CheckedIn { get { return EyeBlur > 0 || Energy > 0; } }
+        public int BreaksDue { get { return EyeTaken + EyeSkipped + StretchTaken + StretchSkipped; } }
 
         public string ToCsv()
         {
@@ -108,109 +109,6 @@ namespace ScreenRest
             for (int i = 0; i < all.Count; i++) if (all[i].Date == today.Date) { all[i] = today; found = true; }
             if (!found) all.Add(today);
             return all;
-        }
-
-        static string Rating(int v) { return v == 0 ? " -" : " " + v; }
-
-        static void Line(StringBuilder sb, string label, int width, string value) { sb.AppendLine((label + ":").PadRight(width) + value); }
-
-        public static string Report(DayStats today)
-        {
-            var sb = new StringBuilder();
-            if (DemoMode) sb.AppendLine(L.T("(demo mode: separate test stats)", "(demo mode: hiwalay na test stats)")).AppendLine();
-            sb.AppendLine(L.T("TODAY", "NGAYONG ARAW") + "  (" + L.Date(today.Date, "ddd d MMM") + ")");
-            string taken = L.T(" taken, ", " ginawa, "), skipped = L.T(" skipped", " nilaktawan");
-            Line(sb, L.T("Active screen time", "Oras sa screen"), 21, Duration(today.ActiveSec));
-            Line(sb, "Eye breaks", 21, today.EyeTaken + taken + today.EyeSkipped + skipped);
-            Line(sb, "Stretch breaks", 21, today.StretchTaken + taken + today.StretchSkipped + skipped);
-            Line(sb, L.T("Postponed", "Ipinagpaliban"), 21, today.Postponed.ToString());
-            Line(sb, "Break score", 21, today.Score + "%");
-            Line(sb, "Check-in", 21, today.CheckedIn
-                ? string.Format(L.T("eye blur {0}/5, energy {1}/5", "labo ng mata {0}/5, lakas {1}/5"), today.EyeBlur, today.Energy)
-                : L.T("not done yet", "hindi pa nagagawa"));
-            sb.AppendLine();
-            sb.AppendLine(L.T("LAST 14 DAYS                               blur energy",
-                              "HULING 14 ARAW                             labo lakas"));
-            var all = History(today);
-            all.Reverse();
-            int n = 0;
-            foreach (var row in all)
-            {
-                sb.AppendLine(string.Format("{0,-11} {1}  eye {2,2}/{3,-2} str {4,2}/{5,-2} {6,3}%  {7}   {8}",
-                    L.Date(row.Date, "ddd d MMM"), Duration(row.ActiveSec),
-                    row.EyeTaken, row.EyeTaken + row.EyeSkipped, row.StretchTaken, row.StretchTaken + row.StretchSkipped,
-                    row.Score, Rating(row.EyeBlur), Rating(row.Energy)));
-                if (++n >= 14) break;
-            }
-            return sb.ToString();
-        }
-
-        // ------------------------------------------------------------------ weekly summary
-        static DateTime WeekStart(DateTime d)
-        {
-            int diff = ((int)d.DayOfWeek + 6) % 7; // Monday = 0
-            return d.Date.AddDays(-diff);
-        }
-
-        class WeekTotals
-        {
-            public int Days, Active, EyeT, EyeAll, StrT, StrAll, BlurSum, BlurN, EnergySum, EnergyN;
-            public DayStats Best;
-            public int Score { get { int all = EyeAll + StrAll; return all == 0 ? 0 : (int)Math.Round(100.0 * (EyeT + StrT) / all); } }
-            public string AvgBlur { get { return BlurN == 0 ? "-" : (BlurSum / (double)BlurN).ToString("0.0"); } }
-            public string AvgEnergy { get { return EnergyN == 0 ? "-" : (EnergySum / (double)EnergyN).ToString("0.0"); } }
-        }
-
-        static WeekTotals Totals(List<DayStats> all, DateTime start)
-        {
-            var w = new WeekTotals();
-            foreach (var d in all)
-            {
-                if (d.Date < start || d.Date >= start.AddDays(7)) continue;
-                if (d.ActiveSec > 0) w.Days++;
-                w.Active += d.ActiveSec;
-                w.EyeT += d.EyeTaken; w.EyeAll += d.EyeTaken + d.EyeSkipped;
-                w.StrT += d.StretchTaken; w.StrAll += d.StretchTaken + d.StretchSkipped;
-                if (d.EyeBlur > 0) { w.BlurSum += d.EyeBlur; w.BlurN++; }
-                if (d.Energy > 0) { w.EnergySum += d.Energy; w.EnergyN++; }
-                if (d.ActiveSec > 0 && (w.Best == null || d.Score > w.Best.Score)) w.Best = d;
-            }
-            return w;
-        }
-
-        public static string WeeklyReport(DayStats today)
-        {
-            var all = History(today);
-            var thisStart = WeekStart(today.Date);
-            var t = Totals(all, thisStart);
-            var l = Totals(all, thisStart.AddDays(-7));
-            var sb = new StringBuilder();
-            const string F = "{0,-25}{1,9}   {2,9}";
-            sb.AppendLine(string.Format(F, L.T("WEEK OF ", "LINGGO NG ") + L.Date(thisStart, "d MMM"),
-                L.T("this week", "ngayon"), L.T("last week", "nakaraan")));
-            sb.AppendLine(string.Format(F, L.T("Days tracked", "Araw na naitala"), t.Days, l.Days));
-            sb.AppendLine(string.Format(F, L.T("Active screen time", "Oras sa screen"), Duration(t.Active), Duration(l.Active)));
-            sb.AppendLine(string.Format(F, L.T("Eye breaks taken", "Eye breaks na ginawa"), t.EyeT + "/" + t.EyeAll, l.EyeT + "/" + l.EyeAll));
-            sb.AppendLine(string.Format(F, L.T("Stretch breaks taken", "Stretch breaks na ginawa"), t.StrT + "/" + t.StrAll, l.StrT + "/" + l.StrAll));
-            sb.AppendLine(string.Format(F, "Break score", t.Score + "%", l.Score + "%"));
-            sb.AppendLine(string.Format(F, L.T("Avg right-eye blur (1-5)", "Labo ng kanang mata (1-5)"), t.AvgBlur, l.AvgBlur));
-            sb.AppendLine(string.Format(F, L.T("Avg energy (1-5)", "Karaniwang lakas (1-5)"), t.AvgEnergy, l.AvgEnergy));
-            sb.AppendLine();
-            if (t.Best != null) sb.AppendLine(string.Format(L.T("Best day: {0} ({1}% of breaks taken)", "Pinakamagandang araw: {0} ({1}% ng breaks ang ginawa)"),
-                L.Date(t.Best.Date, "dddd"), t.Best.Score));
-            if (l.Days > 0 && t.Score > l.Score) sb.AppendLine(L.T("You took more of your breaks than last week. Nice!",
-                "Mas marami kang breaks na ginawa kaysa noong nakaraang linggo. Galing!"));
-            else if (l.Days > 0 && t.Score < l.Score) sb.AppendLine(L.T("Fewer breaks than last week. Try strict mode next week?",
-                "Mas kaunti ang breaks kaysa noong nakaraang linggo. Subukan ang strict mode sa susunod na linggo?"));
-            if (t.BlurN > 0 && l.BlurN > 0)
-            {
-                double tb = t.BlurSum / (double)t.BlurN, lb = l.BlurSum / (double)l.BlurN;
-                if (tb > lb + 0.4) sb.AppendLine(L.T("Eye blur is up on last week. Please book that eye exam.",
-                    "Lumabo ang mata kumpara noong nakaraang linggo. Magpa-eye exam ka na."));
-                else if (tb < lb - 0.4) sb.AppendLine(L.T("Eye blur is down on last week. Keep resting those eyes.",
-                    "Bumuti ang labo ng mata kumpara noong nakaraang linggo. Ituloy ang pagpapahinga ng mata."));
-            }
-            return sb.ToString();
         }
     }
 }
