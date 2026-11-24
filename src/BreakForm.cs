@@ -24,6 +24,9 @@ namespace ScreenRest
     {
         public BreakResult Result = BreakResult.Completed;
         public int PausedSeconds; // time the countdown was held because you kept working
+        /// <summary>Seconds of the break actually done (countdown time, not counting pauses), and the planned length.</summary>
+        public int ElapsedSeconds { get { return elapsed; } }
+        public int PlannedSeconds { get { return totalSec; } }
 
         readonly BreakKind kind;
         readonly List<Exercise> steps;

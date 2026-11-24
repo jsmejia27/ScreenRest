@@ -10,7 +10,8 @@ namespace ScreenRest
         readonly TableLayoutPanel grid;
         DateTimePicker dtStart, dtEnd, dtLunchS, dtLunchE;
         CheckBox chkLunch, chkStrict, chkSounds, chkStartup, chkBlink;
-        CheckBox chkVoice, chkDefer, chkHandsOff, chkCheckIn;
+        CheckBox chkVoice, chkDefer, chkHandsOff, chkCheckIn, chkCountdown;
+        Label lblShiftSummary, lblBreakSummary; // live summaries of what the current choices add up to
         ComboBox cmbLang;
         NumericUpDown nIntro;
         CheckBox[] days = new CheckBox[7];
@@ -60,6 +61,7 @@ namespace ScreenRest
             lunch.Controls.Add(new Label { Text = L.T("to", "hanggang"), AutoSize = true, Margin = new Padding(4, 6, 4, 0) });
             lunch.Controls.Add(dtLunchE);
             Row(L.T("Lunch", "Tanghalian"), lunch);
+            lblShiftSummary = Note();
 
             Section(L.T("Eye break (20-20-20 rule)", "Eye break (20-20-20 rule)"));
             nMicroI = Num(5, 120, s.MicroIntervalMin); Row(L.T("Every (minutes)", "Tuwing (minuto)"), nMicroI);
@@ -68,6 +70,7 @@ namespace ScreenRest
             Section(L.T("Stand-up and stretch break", "Tayo at stretch break"));
             nLongI = Num(15, 180, s.LongIntervalMin); Row(L.T("Every (minutes)", "Tuwing (minuto)"), nLongI);
             nLongD = Num(1, 20, s.LongDurationMin); Row(L.T("Lasts (minutes)", "Tagal (minuto)"), nLongD);
+            lblBreakSummary = Note();
 
             Section(L.T("Guidance and smart breaks", "Gabay at matalinong breaks"));
             chkVoice = new CheckBox { Text = L.T("Voice guidance (so your eyes can leave the screen)",
@@ -98,6 +101,9 @@ namespace ScreenRest
                 "Mahinahong paalalang \"kumurap\" sa pagitan ng breaks"), Checked = s.BlinkNudges, AutoSize = true };
             Row("", chkBlink);
             nBlink = Num(5, 60, s.BlinkEveryMin); Row(L.T("Blink reminder every (min)", "Paalalang kumurap tuwing (min)"), nBlink);
+            chkCountdown = new CheckBox { Text = L.T("Show minutes to the next break on the tray icon",
+                "Ipakita sa tray icon ang minuto bago ang susunod na break"), Checked = s.TrayCountdown, AutoSize = true };
+            Row("", chkCountdown);
             chkStartup = new CheckBox { Text = L.T("Start ScreenRest when I sign in to Windows",
                 "Buksan ang ScreenRest pag-sign in ko sa Windows"), Checked = Settings.StartupEnabled, AutoSize = true };
             if (Settings.IsPackaged)
@@ -109,6 +115,14 @@ namespace ScreenRest
                 Row("", link);
             }
             else Row("", chkStartup);
+
+            // Keep the summaries in step with the choices.
+            EventHandler update = (o, e) => UpdateSummaries();
+            foreach (var p in new[] { dtStart, dtEnd, dtLunchS, dtLunchE }) p.ValueChanged += update;
+            foreach (var n in new[] { nMicroI, nLongI, nLongD }) n.ValueChanged += update;
+            foreach (var c in days) c.CheckedChanged += update;
+            chkLunch.CheckedChanged += update;
+            UpdateSummaries();
 
             var btns = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 14, 0, 0) };
             var ok = new Button { Text = L.T("Save", "I-save"), AutoSize = true, Padding = new Padding(10, 2, 10, 2) };
@@ -123,6 +137,23 @@ namespace ScreenRest
             Controls.Add(grid);
             AcceptButton = ok;
             CancelButton = cancel;
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            // On short screens, keep the window on screen and scroll the settings instead.
+            var wa = Screen.FromPoint(Cursor.Position).WorkingArea;
+            var pref = PreferredSize;
+            if (pref.Height > wa.Height)
+            {
+                int bar = SystemInformation.VerticalScrollBarWidth;
+                AutoSize = false;
+                AutoScroll = true;
+                StartPosition = FormStartPosition.Manual;
+                Size = new Size(Math.Min(wa.Width, pref.Width + bar), wa.Height);
+                Location = new Point(Math.Max(wa.Left, wa.Left + (wa.Width - Width) / 2), wa.Top);
+            }
         }
 
         void ApplyFrom(Settings d)
@@ -140,7 +171,44 @@ namespace ScreenRest
             nIdle.Value = d.IdleResetMin; chkStrict.Checked = d.StrictMode; chkSounds.Checked = d.Sounds;
             chkBlink.Checked = d.BlinkNudges; nBlink.Value = d.BlinkEveryMin;
             chkVoice.Checked = d.VoiceGuide; nIntro.Value = d.VideoIntroSec; chkDefer.Checked = d.DeferDuringMeetings;
-            chkHandsOff.Checked = d.HandsOffCheck; chkCheckIn.Checked = d.DailyCheckIn;
+            chkHandsOff.Checked = d.HandsOffCheck; chkCheckIn.Checked = d.DailyCheckIn; chkCountdown.Checked = d.TrayCountdown;
+        }
+
+        void UpdateSummaries()
+        {
+            var t = new Settings
+            {
+                ShiftStartMin = Min(dtStart), ShiftEndMin = Min(dtEnd), LunchEnabled = chkLunch.Checked,
+                LunchStartMin = Min(dtLunchS), LunchEndMin = Min(dtLunchE),
+                MicroIntervalMin = (int)nMicroI.Value, LongIntervalMin = (int)nLongI.Value
+            };
+            if (t.ShiftEndMin <= t.ShiftStartMin)
+            {
+                lblShiftSummary.Text = L.T("The shift has to end after it starts.", "Dapat matapos ang shift pagkatapos nitong magsimula.");
+                lblShiftSummary.ForeColor = Color.FromArgb(200, 90, 20);
+                lblBreakSummary.Text = "";
+                return;
+            }
+            int workDays = 0;
+            foreach (var c in days) if (c.Checked) workDays++;
+            int eye, stretch, active;
+            t.PlanDay(out eye, out stretch, out active);
+            lblShiftSummary.ForeColor = Color.DimGray;
+            lblShiftSummary.Text = string.Format(L.T("Reminders run {0} a day, {1} days a week. Outside these hours ScreenRest stays quiet.",
+                "Tumatakbo ang paalala nang {0} bawat araw, {1} araw bawat linggo. Tahimik ang ScreenRest sa labas ng oras na ito."),
+                DayStats.Duration(active * 60), workDays);
+            lblBreakSummary.Text = string.Format(L.T("A full shift gives you about {0} eye breaks and {1} stretch breaks, {2} minutes on your feet.",
+                "Sa isang buong shift, mga {0} eye break at {1} stretch break, {2} minutong nakatayo."),
+                eye, stretch, stretch * (int)nLongD.Value);
+        }
+
+        /// <summary>A grey line of text spanning both columns.</summary>
+        Label Note()
+        {
+            var l = new Label { AutoSize = true, MaximumSize = new Size(620, 0), ForeColor = Color.DimGray, Margin = new Padding(0, 2, 0, 0) };
+            grid.Controls.Add(l);
+            grid.SetColumnSpan(l, 2);
+            return l;
         }
 
         static int Min(DateTimePicker p) { return p.Value.Hour * 60 + p.Value.Minute; }
@@ -169,7 +237,7 @@ namespace ScreenRest
             s.IdleResetMin = (int)nIdle.Value; s.StrictMode = chkStrict.Checked; s.Sounds = chkSounds.Checked;
             s.BlinkNudges = chkBlink.Checked; s.BlinkEveryMin = (int)nBlink.Value;
             s.VoiceGuide = chkVoice.Checked; s.VideoIntroSec = (int)nIntro.Value; s.DeferDuringMeetings = chkDefer.Checked;
-            s.HandsOffCheck = chkHandsOff.Checked; s.DailyCheckIn = chkCheckIn.Checked;
+            s.HandsOffCheck = chkHandsOff.Checked; s.DailyCheckIn = chkCheckIn.Checked; s.TrayCountdown = chkCountdown.Checked;
             try
             {
                 s.Save();

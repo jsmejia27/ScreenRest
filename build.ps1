@@ -12,6 +12,19 @@ $src  = Get-ChildItem (Join-Path $root 'src') -Filter *.cs | ForEach-Object { $_
 $common = @('/nologo', '/optimize+', '/target:winexe', '/platform:anycpu',
             '/r:System.dll', '/r:System.Drawing.dll', '/r:System.Windows.Forms.dll')
 
+# VERSION=1.2.0 (CI passes it from a v* tag) overrides the version in src\AssemblyInfo.cs for this build only.
+$tmpInfo = $null
+if ($env:VERSION) {
+    if ($env:VERSION -notmatch '^\d+\.\d+\.\d+$') { throw "VERSION must look like 1.2.0, got '$env:VERSION'." }
+    $info = Join-Path $root 'src\AssemblyInfo.cs'
+    $text = [IO.File]::ReadAllText($info) -replace '"\d+\.\d+\.\d+\.0"', "`"$env:VERSION.0`"" `
+                                          -replace 'InformationalVersion\("\d+\.\d+\.\d+"\)', "InformationalVersion(`"$env:VERSION`")"
+    $tmpInfo = Join-Path $env:TEMP ('ScreenRest_AssemblyInfo_' + [guid]::NewGuid().ToString('N') + '.cs')
+    [IO.File]::WriteAllText($tmpInfo, $text, (New-Object Text.UTF8Encoding $true))
+    $src = @($src | Where-Object { $_ -ne $info }) + $tmpInfo
+    Write-Host "Version $env:VERSION"
+}
+
 # Pass 1: compile, then let the app draw its own .ico.  Pass 2: embed that icon in the exe.
 & $csc @common "/out:$out" @src
 if ($LASTEXITCODE -ne 0) { throw 'Compile failed' }
@@ -21,4 +34,5 @@ Add-Type -AssemblyName System.Drawing, System.Windows.Forms
 [Reflection.Assembly]::LoadFile($tmp).GetType('ScreenRest.IconFactory').GetMethod('SaveIco').Invoke($null, [object[]]@([string]$ico)) | Out-Null
 & $csc @common "/out:$out" "/win32icon:$ico" @src
 if ($LASTEXITCODE -ne 0) { throw 'Compile failed' }
+if ($tmpInfo) { Remove-Item $tmpInfo -ErrorAction SilentlyContinue }
 Write-Host "Built $out"

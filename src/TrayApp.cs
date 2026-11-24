@@ -47,7 +47,7 @@ namespace ScreenRest
             icoDue = IconFactory.MakeIcon(IconFactory.Due);
 
             tray = new NotifyIcon { Icon = icoActive, Visible = true, Text = "ScreenRest" };
-            tray.DoubleClick += (o, e) => ShowStats();
+            tray.DoubleClick += (o, e) => ShowDashboard(1);
             BuildMenu();
 
             tick = new Timer { Interval = 1000 };
@@ -84,9 +84,9 @@ namespace ScreenRest
             resumeItem = new ToolStripMenuItem(L.T("Resume reminders", "Ituloy ang mga paalala"), null, (o, e) => { pausedUntil = DateTime.MinValue; Refresh(); });
             menu.Items.Add(resumeItem);
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(L.T("Today's stats", "Stats ngayong araw"), null, (o, e) => ShowStats());
-            menu.Items.Add(L.T("Weekly summary", "Buod ng linggo"), null, (o, e) => ShowWeekly());
-            menu.Items.Add(L.T("Health trend (eye and energy)...", "Takbo ng kalusugan (mata at lakas)..."), null, (o, e) => new TrendForm(stats).Show());
+            var dash = new ToolStripMenuItem(L.T("Dashboard...", "Dashboard..."), null, (o, e) => ShowDashboard(1));
+            dash.Font = new Font(dash.Font, FontStyle.Bold); // also what double-clicking the tray icon opens
+            menu.Items.Add(dash);
             menu.Items.Add(L.T("Daily check-in...", "Pang-araw-araw na check-in..."), null, (o, e) => ShowCheckIn(false));
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(L.T("Settings...", "Settings..."), null, (o, e) => ShowSettings());
@@ -251,15 +251,23 @@ namespace ScreenRest
             checkIn.FormClosed += (o, e) =>
             {
                 checkIn = null;
+                if (dashboard != null && !dashboard.IsDisposed) dashboard.Reload();
                 if (thenWeekly) ShowWeekly();
             };
             checkIn.Show();
         }
 
-        void ShowWeekly()
+        /// <summary>End of the week: the Dashboard opens on the last 7 days.</summary>
+        void ShowWeekly() { ShowDashboard(7); }
+
+        DashboardForm dashboard;
+        void ShowDashboard(int range)
         {
             stats.Save();
-            new ReportForm(L.T("ScreenRest: weekly summary", "ScreenRest: buod ng linggo"), DayStats.WeeklyReport(stats)).Show();
+            if (dashboard != null && !dashboard.IsDisposed) { dashboard.ShowRange(range); return; }
+            dashboard = new DashboardForm(range, () => stats, () => s.DailyCheckIn, () => ShowCheckIn(false));
+            dashboard.FormClosed += (o, e) => dashboard = null;
+            dashboard.Show();
         }
 
         void ResetEye() { sinceEye = 0; eyeWarned = false; sinceBlink = 0; }
@@ -294,7 +302,13 @@ namespace ScreenRest
                 overlays.Add(d);
                 d.Show();
             }
-            main.FormClosed += (o, e) => EndBreak(kind, main.Result);
+            main.FormClosed += (o, e) =>
+            {
+                if (inBreak)
+                    BreakLog.Append(new BreakEntry { Time = DateTime.Now, Kind = kind, Result = main.Result,
+                        PlannedSec = main.PlannedSeconds, TakenSec = main.ElapsedSeconds, PausedSec = main.PausedSeconds });
+                EndBreak(kind, main.Result);
+            };
             overlays.Add(main);
             main.Show();
         }
@@ -367,18 +381,34 @@ namespace ScreenRest
             tray.Text = t.Length > 63 ? t.Substring(0, 63) : t;
             var now = DateTime.Now;
             bool idleState = now < pausedUntil || (!demo && !s.IsActiveTime(now));
-            tray.Icon = inBreak ? icoDue : idleState ? icoPaused : icoActive;
+            var icon = inBreak ? icoDue : idleState ? icoPaused : icoActive;
+            // Optional countdown on the icon: minutes to the next break (rounded up, so "1" is the last minute).
+            if (s.TrayCountdown && !inBreak && !idleState && !deferring)
+            {
+                int next = Math.Max(0, Math.Min(EyeEvery - sinceEye, StretchEvery - sinceStretch));
+                int mins = (next + 59) / 60;
+                if (mins >= 1 && mins <= 99)
+                {
+                    if (mins != countMinutes)
+                    {
+                        var old = icoCount;
+                        icoCount = IconFactory.MakeNumberIcon(mins.ToString(), IconFactory.Brand);
+                        countMinutes = mins;
+                        tray.Icon = icoCount;
+                        if (old != null) old.Dispose();
+                    }
+                    icon = icoCount;
+                }
+            }
+            if (tray.Icon != icon) tray.Icon = icon;
         }
+
+        Icon icoCount;
+        int countMinutes = -1;
 
         void Balloon(string title, string text)
         {
             tray.ShowBalloonTip(6000, title, text, ToolTipIcon.Info);
-        }
-
-        void ShowStats()
-        {
-            stats.Save();
-            new ReportForm(L.T("ScreenRest: stats", "ScreenRest: stats"), DayStats.Report(stats)).Show();
         }
 
         SettingsForm settingsForm;
@@ -390,9 +420,16 @@ namespace ScreenRest
             {
                 if (settingsForm.DialogResult == DialogResult.OK)
                 {
+                    string oldLanguage = s.Language;
                     s = Settings.Load();
                     L.Set(s.Language);
                     BuildMenu();
+                    // The Dashboard's labels are built once; reopen it in the new language.
+                    if (dashboard != null && !dashboard.IsDisposed)
+                    {
+                        if (s.Language != oldLanguage) { dashboard.Close(); ShowDashboard(1); }
+                        else dashboard.Reload();
+                    }
                     Balloon(L.T("Settings saved", "Na-save ang settings"), StatusText());
                 }
                 settingsForm = null;

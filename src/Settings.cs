@@ -40,6 +40,7 @@ namespace ScreenRest
         public bool DeferDuringMeetings = true; // hold breaks while camera/mic is in use or a full-screen app is up
         public bool HandsOffCheck = true;       // break timer pauses while you keep typing / using the mouse
         public bool DailyCheckIn = true;        // ask eye-blur and energy ratings at the end of each shift
+        public bool TrayCountdown = false;      // show minutes to the next break on the tray icon
 
         // Interface language: "en" (English) or "tl" (Tagalog). Voice-overs stay in English.
         public string Language = "en";
@@ -66,6 +67,38 @@ namespace ScreenRest
         public bool IsActiveTime(DateTime t) { return InShiftHours(t) && !InLunch(t); }
 
         public static string Hm(int minutes) { return string.Format("{0}:{1:00}", minutes / 60, minutes % 60); }
+
+        /// <summary>
+        /// How a full workday plays out with these settings, using the same timer rules as the app: a stretch
+        /// break resets both timers, and an eye break due within 2 minutes of a stretch break is skipped.
+        /// </summary>
+        public void PlanDay(out int eyeBreaks, out int stretchBreaks, out int activeMin)
+        {
+            var segments = new List<int>();
+            if (LunchEnabled && LunchStartMin > ShiftStartMin && LunchEndMin < ShiftEndMin && LunchEndMin > LunchStartMin)
+            {
+                segments.Add(LunchStartMin - ShiftStartMin);
+                segments.Add(ShiftEndMin - LunchEndMin);
+            }
+            else segments.Add(Math.Max(0, ShiftEndMin - ShiftStartMin));
+            int eyeSec = MicroIntervalMin * 60, strSec = LongIntervalMin * 60;
+            eyeBreaks = 0; stretchBreaks = 0; activeMin = 0;
+            foreach (int seg in segments)
+            {
+                activeMin += seg;
+                int sinceEye = 0, sinceStr = 0;
+                for (int t = 0; t < seg * 60; t++)
+                {
+                    sinceEye++; sinceStr++;
+                    if (strSec - sinceStr <= 0) { stretchBreaks++; sinceStr = 0; sinceEye = 0; }
+                    else if (eyeSec - sinceEye <= 0)
+                    {
+                        if (strSec - sinceStr > 120) eyeBreaks++;
+                        sinceEye = 0;
+                    }
+                }
+            }
+        }
 
         public static Settings Load()
         {
@@ -101,6 +134,7 @@ namespace ScreenRest
                 s.DeferDuringMeetings = Bool(d, "DeferDuringMeetings", s.DeferDuringMeetings);
                 s.HandsOffCheck = Bool(d, "HandsOffCheck", s.HandsOffCheck);
                 s.DailyCheckIn = Bool(d, "DailyCheckIn", s.DailyCheckIn);
+                s.TrayCountdown = Bool(d, "TrayCountdown", s.TrayCountdown);
                 string lang;
                 if (d.TryGetValue("Language", out lang) && (lang == "en" || lang == "tl")) s.Language = lang;
                 string wd;
@@ -128,7 +162,7 @@ namespace ScreenRest
                 "BlinkNudges=" + BlinkNudges, "BlinkEveryMin=" + BlinkEveryMin,
                 "VoiceGuide=" + VoiceGuide, "VideoIntroSec=" + VideoIntroSec,
                 "DeferDuringMeetings=" + DeferDuringMeetings, "HandsOffCheck=" + HandsOffCheck,
-                "DailyCheckIn=" + DailyCheckIn, "Language=" + Language
+                "DailyCheckIn=" + DailyCheckIn, "Language=" + Language, "TrayCountdown=" + TrayCountdown
             };
             File.WriteAllLines(FilePath, lines);
         }

@@ -50,6 +50,37 @@ namespace ScreenRest
             }
         }
 
+        /// <summary>Tray icon showing a short number (minutes to the next break) in white on a rounded square.</summary>
+        public static Icon MakeNumberIcon(string text, Color c)
+        {
+            using (var b = new Bitmap(32, 32, PixelFormat.Format32bppArgb))
+            {
+                using (var g = Graphics.FromImage(b))
+                using (var br = new SolidBrush(c))
+                using (var path = new GraphicsPath())
+                {
+                    g.SmoothingMode = SmoothingMode.AntiAlias;
+                    g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+                    g.Clear(Color.Transparent);
+                    const float r = 7;
+                    path.AddArc(0, 0, 2 * r, 2 * r, 180, 90);
+                    path.AddArc(32 - 2 * r, 0, 2 * r, 2 * r, 270, 90);
+                    path.AddArc(32 - 2 * r, 32 - 2 * r, 2 * r, 2 * r, 0, 90);
+                    path.AddArc(0, 32 - 2 * r, 2 * r, 2 * r, 90, 90);
+                    path.CloseFigure();
+                    g.FillPath(br, path);
+                    // Tight letter spacing so two digits stay readable at 16 px
+                    using (var f = new Font("Segoe UI", text.Length > 1 ? 23f : 27f, FontStyle.Bold, GraphicsUnit.Pixel))
+                    using (var sf = new StringFormat(StringFormat.GenericTypographic) { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+                        g.DrawString(text, f, Brushes.White, new RectangleF(-4, 1, 40, 32), sf);
+                }
+                IntPtr h = b.GetHicon();
+                var ic = (Icon)Icon.FromHandle(h).Clone();
+                DestroyIcon(h);
+                return ic;
+            }
+        }
+
         /// <summary>Writes a multi-size PNG-compressed .ico (used by build.ps1 for the exe icon).</summary>
         public static void SaveIco(string path)
         {
