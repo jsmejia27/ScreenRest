@@ -53,6 +53,28 @@ final class SettingsModel: ObservableObject {
                 })
     }
 
+    @Published var calendarNote: String?
+
+    /// Turning the calendar on asks macOS for access first; it stays off if access is refused.
+    var calendar: Binding<Bool> {
+        Binding(get: { self.s.useCalendar },
+                set: { v in
+                    guard v else { self.set(\.useCalendar, false); self.calendarNote = nil; return }
+                    if CalendarWatch.shared.authorized { self.set(\.useCalendar, true); return }
+                    CalendarWatch.shared.requestAccess { ok in
+                        self.set(\.useCalendar, ok)
+                        self.calendarNote = ok ? nil : L.t("Calendar access is off. Allow ScreenRest in System Settings → Privacy & Security → Calendars.",
+                                                           "Naka-off ang access sa calendar. Payagan ang ScreenRest sa System Settings → Privacy & Security → Calendars.")
+                    }
+                })
+    }
+
+    private func set<T>(_ kp: ReferenceWritableKeyPath<Settings, T>, _ v: T) {
+        objectWillChange.send()
+        s[keyPath: kp] = v
+        applied()
+    }
+
     var shiftValid: Bool { s.shiftEndMin > s.shiftStartMin }
     var lunchValid: Bool { !s.lunchEnabled || s.lunchEndMin > s.lunchStartMin }
 
@@ -68,6 +90,7 @@ final class SettingsModel: ObservableObject {
         s.postponeMin = d.postponeMin; s.sounds = d.sounds; s.idleResetMin = d.idleResetMin
         s.blinkNudges = d.blinkNudges; s.blinkEveryMin = d.blinkEveryMin; s.voiceGuide = d.voiceGuide
         s.deferDuringMeetings = d.deferDuringMeetings; s.handsOffCheck = d.handsOffCheck; s.dailyCheckIn = d.dailyCheckIn
+        s.useCalendar = d.useCalendar; s.menuBarCountdown = d.menuBarCountdown
         s.language = lang
         applied()
     }
@@ -296,6 +319,10 @@ struct GeneralPane: View {
                 Toggle(L.t("Play sounds", "Magpatunog"), isOn: m.b(\.sounds))
             }
 
+            Section(L.t("Menu bar", "Menu bar")) {
+                Toggle(L.t("Show time to the next break", "Ipakita ang oras bago ang susunod na break"), isOn: m.b(\.menuBarCountdown))
+            }
+
             Section {
                 if Settings.canManageStartup {
                     Toggle(L.t("Open ScreenRest when I log in", "Buksan ang ScreenRest pag-log in ko"), isOn: m.startup)
@@ -438,6 +465,18 @@ struct SmartPane: View {
             } footer: {
                 Footnote(text: L.t("Calls are noticed when the camera or microphone is in use. ScreenRest never turns them on or listens.",
                                    "Napapansin ang tawag kapag ginagamit ang camera o mikropono. Hindi kailanman binubuksan o pinakikinggan ng ScreenRest ang mga ito."))
+            }
+
+            Section {
+                Toggle(L.t("Use my calendar", "Gamitin ang calendar ko"), isOn: m.calendar)
+            } header: {
+                Text(L.t("Calendar", "Calendar"))
+            } footer: {
+                if let n = m.calendarNote { Footnote(text: n, warning: true) }
+                else {
+                    Footnote(text: L.t("Breaks wait during meetings, and a stretch break due during a meeting moves to just before it. Only event times are read; nothing leaves your Mac.",
+                                       "Naghihintay ang break habang may meeting, at inililipat bago ang meeting ang stretch break na tatama rito. Oras lang ng event ang binabasa; walang lumalabas sa Mac mo."))
+                }
             }
 
             Section {

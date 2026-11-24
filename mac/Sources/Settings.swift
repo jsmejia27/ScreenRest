@@ -37,6 +37,10 @@ final class Settings {
     var handsOffCheck = true       // break timer pauses while you keep typing / using the mouse
     var dailyCheckIn = true        // ask eye-blur and energy ratings at the end of each shift
 
+    // Mac only (the Windows build ignores these keys)
+    var useCalendar = false        // hold breaks during calendar meetings; move a stretch break before a meeting
+    var menuBarCountdown = false   // show minutes to the next break next to the menu bar icon
+
     /// Interface language: "en" (English) or "tl" (Tagalog). Voice-overs stay in English.
     var language = "en"
 
@@ -104,6 +108,8 @@ final class Settings {
         s.deferDuringMeetings = bool("DeferDuringMeetings", s.deferDuringMeetings)
         s.handsOffCheck = bool("HandsOffCheck", s.handsOffCheck)
         s.dailyCheckIn = bool("DailyCheckIn", s.dailyCheckIn)
+        s.useCalendar = bool("UseCalendar", s.useCalendar)
+        s.menuBarCountdown = bool("MenuBarCountdown", s.menuBarCountdown)
         if let lang = d["language"], lang == "en" || lang == "tl" { s.language = lang }
         if let wd = d["workdays"], wd.count == 7 {
             s.workDays = wd.map { $0 == "1" }
@@ -127,6 +133,7 @@ final class Settings {
             "VoiceGuide=\(b(voiceGuide))", "VideoIntroSec=\(videoIntroSec)",
             "DeferDuringMeetings=\(b(deferDuringMeetings))", "HandsOffCheck=\(b(handsOffCheck))",
             "DailyCheckIn=\(b(dailyCheckIn))", "Language=\(language)",
+            "UseCalendar=\(b(useCalendar))", "MenuBarCountdown=\(b(menuBarCountdown))",
         ]
         try (lines.joined(separator: "\n") + "\n").write(to: Settings.fileURL, atomically: true, encoding: .utf8)
     }

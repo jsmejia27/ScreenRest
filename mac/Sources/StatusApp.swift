@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var wasActive = false, inBreak = false
     private var deferring = false, deferReason = "", freeTicks = 0 // break held while in a call / full-screen app
     private var greetedDate: Date?, summaryDate: Date?
+    private var movedForMeeting: String? // calendar event a stretch break was already moved for
 
     private var breakCtl: BreakController?
     private var dims: [NSWindow] = []
@@ -50,7 +51,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         installMainMenu()
         Notifier.shared.setup()
 
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem.button?.imagePosition = .imageLeading
+        statusItem.button?.font = .monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
         statusItem.button?.image = icoActive
         statusItem.button?.toolTip = "ScreenRest"
         buildMenu()
@@ -206,7 +209,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         if let due = due {
             // Never pop up in the middle of a video call, presentation or full-screen video.
-            if s.deferDuringMeetings, let why = Native.isBusy() {
+            let why = (s.deferDuringMeetings ? Native.isBusy() : nil) ?? meetingReason()
+            if let why = why {
                 if !deferring {
                     deferring = true
                     deferReason = why
@@ -228,6 +232,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
 
+        if moveStretchBeforeMeeting(toStretch) { refresh(); return }
+
         if !stretchWarned && stretchWarn > 0 && toStretch <= stretchWarn {
             stretchWarned = true
             balloon(L.t("Stretch break in \(toStretch) seconds", "Stretch break sa loob ng \(toStretch) segundo"),
@@ -244,6 +250,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                         "Kumurap nang dahan-dahan nang ilang beses, at i-relax ang mga balikat."))
         }
         refresh()
+    }
+
+    // ------------------------------------------------------------------ calendar
+    /// "you're in a meeting" while a calendar event you're busy for is on (Settings → Use my calendar).
+    private func meetingReason() -> String? {
+        guard s.useCalendar, !demo, let e = CalendarWatch.shared.meetingNow() else { return nil }
+        let title = (e.title ?? "").trimmingCharacters(in: .whitespaces)
+        return title.isEmpty ? L.t("you're in a meeting", "nasa meeting ka")
+                             : L.t("you're in “\(title)”", "nasa “\(title)” ka")
+    }
+
+    /// If the next stretch break would land in a meeting, start it now (after the usual heads-up) instead.
+    private func moveStretchBeforeMeeting(_ toStretch: Int) -> Bool {
+        guard s.useCalendar, !demo, toStretch > stretchWarn, toStretch <= 20 * 60 else { return false }
+        let needed = TimeInterval(stretchLength + stretchWarn + 60) // the break, its heads-up, and a minute to spare
+        guard let e = CalendarWatch.shared.meetingStarting(within: TimeInterval(toStretch + stretchLength)),
+              e.eventIdentifier != movedForMeeting,
+              e.startDate.timeIntervalSinceNow >= needed else { return false }
+        movedForMeeting = e.eventIdentifier
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        sinceStretch = max(0, stretchEvery - stretchWarn)
+        stretchWarned = true
+        balloon(L.t("Stretch break moved before your \(f.string(from: e.startDate)) meeting",
+                    "Inilipat ang stretch break bago ang meeting mo nang \(f.string(from: e.startDate))"),
+                stretchWarn > 0
+                    ? L.t("It starts in \(stretchWarn) seconds, so it won't interrupt the meeting.",
+                          "Magsisimula ito sa loob ng \(stretchWarn) segundo, para hindi maabala ang meeting.")
+                    : L.t("It starts now, so it won't interrupt the meeting.", "Magsisimula na ito, para hindi maabala ang meeting."))
+        return true
     }
 
     private func onShiftEnter(_ now: Date) {
@@ -316,7 +352,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             d.orderFrontRegardless()
         }
         let ctl = BreakController(kind: kind, steps: steps, screen: target, options: opt)
-        ctl.onFinish = { [weak self] r in self?.endBreak(kind, r) }
+        ctl.onFinish = { [weak self, weak ctl] r in
+            if let c = ctl {
+                BreakLog.append(BreakEntry(time: Date(), kind: kind, result: r, plannedSec: c.plannedSeconds,
+                                           takenSec: c.elapsedSeconds, pausedSec: c.pausedSeconds))
+            }
+            self?.endBreak(kind, r)
+        }
         breakCtl = ctl
         ctl.show()
         if s.strictMode {
@@ -395,6 +437,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let now = Date()
         let idleState = now < pausedUntil || (!demo && !s.isActiveTime(now))
         button.image = inBreak ? icoDue : idleState ? icoPaused : icoActive
+        // Optional countdown next to the icon: minutes (or seconds in the last minute) to the next break.
+        if s.menuBarCountdown && !inBreak && !idleState && !deferring {
+            let next = max(0, min(eyeEvery - sinceEye, stretchEvery - sinceStretch))
+            button.title = next >= 60 ? " \(next / 60)m" : " \(next)s"
+        } else {
+            button.title = ""
+        }
     }
 
     private func balloon(_ title: String, _ text: String) { Notifier.shared.post(title, text) }

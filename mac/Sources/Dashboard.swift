@@ -47,6 +47,13 @@ struct BarPoint: Identifiable {
     let count: Int
 }
 
+struct HourPoint: Identifiable {
+    let id = UUID()
+    let hour: Int
+    let kind: String
+    let count: Int
+}
+
 struct RatingPoint: Identifiable {
     let id = UUID()
     let date: Date
@@ -62,6 +69,8 @@ final class DashboardModel: ObservableObject {
     @Published private(set) var bars: [BarPoint] = []
     @Published private(set) var ratings: [RatingPoint] = []
     @Published private(set) var insights: [Insight] = []
+    @Published private(set) var hours: [HourPoint] = []
+    private var entries: [BreakEntry] = []
     @Published private(set) var chartStart = Date()
     @Published private(set) var chartEnd = Date()
 
@@ -85,6 +94,7 @@ final class DashboardModel: ObservableObject {
     static var eyeLabel: String { L.t("Eye breaks", "Eye breaks") }
     static var stretchLabel: String { L.t("Stretch breaks", "Stretch breaks") }
     static var skippedLabel: String { L.t("Skipped", "Nilaktawan") }
+    static var takenLabel: String { L.t("Taken", "Ginawa") }
     static var blurLabel: String { L.t("Eye blur", "Labo ng mata") }
     static var energyLabel: String { L.t("Energy", "Lakas") }
 
@@ -115,6 +125,12 @@ final class DashboardModel: ObservableObject {
             if d.eyeBlur > 0 { r.append(RatingPoint(date: d.date, series: Self.blurLabel, value: d.eyeBlur)) }
             if d.energy > 0 { r.append(RatingPoint(date: d.date, series: Self.energyLabel, value: d.energy)) }
             return r
+        }
+        let since = cal.date(byAdding: .day, value: -(range - 1), to: DayStats.today)!
+        entries = BreakLog.load(since: since).filter { $0.result != .postponed }
+        hours = Dictionary(grouping: entries, by: \.hour).sorted { $0.key < $1.key }.flatMap { h, list -> [HourPoint] in
+            [HourPoint(hour: h, kind: Self.takenLabel, count: list.filter { $0.result == .completed }.count),
+             HourPoint(hour: h, kind: Self.skippedLabel, count: list.filter { $0.result == .skipped }.count)]
         }
         insights = makeInsights()
     }
@@ -207,7 +223,22 @@ final class DashboardModel: ObservableObject {
             }
         }
 
-        // 6. Postponing habit
+        // 6. Time of day with the most skipped breaks (from breaks.csv)
+        if entries.count >= 12 {
+            let overall = Double(entries.filter { $0.result == .skipped }.count) / Double(entries.count)
+            let worst = Dictionary(grouping: entries, by: \.hour)
+                .filter { $0.value.count >= 4 }
+                .map { (hour: $0.key, rate: Double($0.value.filter { $0.result == .skipped }.count) / Double($0.value.count)) }
+                .max { $0.rate < $1.rate }
+            if let w = worst, w.rate >= 0.3, w.rate - overall >= 0.15 {
+                out.append(Insight(tone: .watch, symbol: "clock.badge.exclamationmark",
+                                   text: String(format: L.t("Breaks around %d:00 get skipped most (%d%%). A heads-up a little earlier may help then.",
+                                                            "Pinakamadalas laktawan ang break bandang %d:00 (%d%%). Makakatulong ang mas maagang paalala sa oras na iyon."),
+                                                w.hour, Int((w.rate * 100).rounded()))))
+            }
+        }
+
+        // 7. Postponing habit
         if cur.days > 0 && Double(cur.postponed) / Double(cur.days) >= 2 {
             out.append(Insight(tone: .note, symbol: "clock.arrow.circlepath",
                                text: String(format: L.t("You postpone about %d breaks a day. A longer heads-up in Settings gives you time to wrap up first.",
@@ -215,7 +246,7 @@ final class DashboardModel: ObservableObject {
                                             Int((Double(cur.postponed) / Double(cur.days)).rounded()))))
         }
 
-        // 7. Long screen days
+        // 8. Long screen days
         if range > 1 && cur.days >= 2 && cur.activePerDay >= 7 * 3600 {
             out.append(Insight(tone: .note, symbol: "display",
                                text: String(format: L.t("You average %@ of active screen time a day. Breaks matter most on days like these.",
@@ -223,7 +254,7 @@ final class DashboardModel: ObservableObject {
                                             DayStats.duration(cur.activePerDay))))
         }
 
-        // 8. Nudge to do the check-in
+        // 9. Nudge to do the check-in
         if checkInEnabled() && cur.blurN == 0 && cur.energyN == 0 && cur.days > 0 {
             out.append(Insight(tone: .note, symbol: "checklist",
                                text: L.t("Do the end-of-shift check-in to see how breaks affect your eyes and energy.",
@@ -259,7 +290,8 @@ final class DashboardWindowController: NSWindowController, NSWindowDelegate {
         w.minSize = NSSize(width: 820, height: 600)
         super.init(window: w)
         w.delegate = self
-        let host = NSHostingController(rootView: DashboardView(model: model, onCheckIn: onCheckIn))
+        let host = NSHostingController(rootView: DashboardView(model: model, onCheckIn: onCheckIn,
+                                                               onExport: { ReportPDF.exportWithPanel(today: today) }))
         w.contentViewController = host
         w.setContentSize(NSSize(width: 940, height: 760))
         w.title = L.t("ScreenRest Dashboard", "ScreenRest Dashboard")
@@ -364,6 +396,7 @@ private struct Metric: View {
 struct DashboardView: View {
     @ObservedObject var model: DashboardModel
     let onCheckIn: () -> Void
+    let onExport: () -> Void
     private let refresh = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
     private func pct(_ a: Int, _ b: Int) -> String { b == 0 ? "–" : "\(Int((100.0 * Double(a) / Double(b)).rounded()))%" }
@@ -408,6 +441,7 @@ struct DashboardView: View {
                     VStack(spacing: 14) {
                         breaksChart
                         feelingsChart
+                        hoursChart
                     }
                     .frame(maxWidth: .infinity)
                     insightsCard.frame(width: 290)
@@ -504,6 +538,24 @@ struct DashboardView: View {
         }
     }
 
+    private var hoursChart: some View {
+        Card(title: L.t("Time of day", "Oras ng araw")) {
+            if model.hours.isEmpty {
+                empty(L.t("Shows when you take or skip breaks, once a few breaks are logged with this version.",
+                          "Ipinapakita kung kailan mo ginagawa o nilalaktawan ang breaks, kapag may ilang break nang naitala sa bersyong ito."))
+            } else {
+                Chart(model.hours) { h in
+                    BarMark(x: .value("Hour", "\(h.hour):00"), y: .value("Breaks", h.count))
+                        .foregroundStyle(by: .value("Kind", h.kind))
+                        .cornerRadius(3)
+                }
+                .chartForegroundStyleScale([DashboardModel.takenLabel: teal, DashboardModel.skippedLabel: Color.gray.opacity(0.35)])
+                .chartLegend(position: .top, alignment: .leading)
+                .frame(height: 150)
+            }
+        }
+    }
+
     private var insightsCard: some View {
         Card(title: L.t("Insights", "Mga obserbasyon")) {
             VStack(alignment: .leading, spacing: 14) {
@@ -531,6 +583,12 @@ struct DashboardView: View {
             Spacer()
             Button(L.t("Daily check-in…", "Check-in…"), action: onCheckIn)
             Button(L.t("Open data folder", "Buksan ang data folder")) { openDataFolder() }
+            Button {
+                onExport()
+            } label: {
+                Label(L.t("Export PDF for my doctor…", "I-export ang PDF para sa doktor…"), systemImage: "doc.richtext")
+            }
+            .buttonStyle(.borderedProminent)
         }
     }
 

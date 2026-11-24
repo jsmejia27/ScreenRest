@@ -15,9 +15,19 @@ L.set(Settings.load().language)
 
 let app = NSApplication.shared
 
+if let i = args.firstIndex(of: "--selftest"), i + 1 < args.count {
+    app.setActivationPolicy(.accessory)
+    let t = SelfTest(out: URL(fileURLWithPath: args[i + 1]))
+    app.delegate = t
+    app.run()
+    exit(0)
+}
+
 if let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count {
-    app.setActivationPolicy(.prohibited)
-    Snapshot.run(URL(fileURLWithPath: args[i + 1]), lang: i + 2 < args.count ? args[i + 2] : "en")
+    app.setActivationPolicy(.accessory) // may become active (invisibly) so controls render in active colours
+    MainActor.assumeIsolated { // top-level code runs on the main thread
+        Snapshot.run(URL(fileURLWithPath: args[i + 1]), lang: i + 2 < args.count ? args[i + 2] : "en")
+    }
     exit(0)
 }
 
