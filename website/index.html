@@ -204,6 +204,9 @@ section{padding:96px 0}
 /* download */
 .download{background:var(--bg-2)}
 .dl-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:22px}
+.dl-grid.three{grid-template-columns:1.2fr 1fr 1fr}
+@media (max-width:1080px){.dl-grid.three{grid-template-columns:1fr 1fr}.dl-grid.three .dl.main{grid-column:1/-1}}
+@media (max-width:860px){.dl-grid.three{grid-template-columns:1fr}}
 .dl{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:32px;box-shadow:var(--shadow);display:flex;flex-direction:column}
 .dl.main{border:2px solid var(--brand)}
 .dl .badge{align-self:flex-start;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--brand);padding:5px 11px;border-radius:999px;margin-bottom:16px}
@@ -265,7 +268,8 @@ footer nav a{text-decoration:none;color:var(--night-ink)}
   <symbol id="dl" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></symbol>
   <symbol id="win" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5.5 10.5 4.4v7.1H3V5.5Zm0 13 7.5 1.1v-7H3v5.9Zm8.4 1.2L21 21v-8.4h-9.6v7.1Zm0-15.4v7.2H21V3l-9.6 1.3Z"/></symbol>
   <symbol id="apple" viewBox="0 0 24 24"><path fill="currentColor" d="M16.4 12.6c0-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9s-2-.9-3.3-.9c-1.7 0-3.3 1-4.2 2.5-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8s2 .8 3.3.8c1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.8-4.1ZM14 5.1c.7-.8 1.2-2 1-3.1-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.9-1 3 1.1.1 2.2-.6 2.9-1.4Z"/></symbol>
-  <symbol id="warn" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></symbol>
+  <symbol id="store" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 8h16l-1 12H5L4 8Zm4 0V6a4 4 0 0 1 8 0v2"/></symbol>
+  <symbol id="warn"viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></symbol>
 </svg>
 
 <header class="nav" id="nav">
@@ -291,7 +295,7 @@ footer nav a{text-decoration:none;color:var(--night-ink)}
       <h1>Rest your eyes.<br><em>Move your body.</em><br>Every workday.</h1>
       <p class="lead">ScreenRest is a friendly break coach for people who spend the day at a screen. Every 20 minutes it gets your eyes off the monitor; every hour it gets you standing and moving, guided by short videos and a calm voice.</p>
       <div class="hero-cta">
-        <a class="btn btn-primary" data-os="win" href="https://github.com/jsmejia27/ScreenRest/releases/download/v1.1.1/ScreenRest-Setup-1.1.1.exe"><svg><use href="#win"/></svg>Download for Windows</a>
+        <a class="btn btn-primary" data-os="win" href="https://apps.microsoft.com/detail/9P8LKK7JSWW9?mode=direct" rel="noopener"><svg><use href="#win"/></svg>Get it on Microsoft Store</a>
         <a class="btn btn-primary" data-os="mac" href="https://github.com/jsmejia27/ScreenRest/releases/download/v1.1.1/ScreenRest-1.1.1-mac.dmg"><svg><use href="#apple"/></svg>Download for Mac</a>
       </div>
       <p class="hero-meta">Version 1.1.1 · Windows 10 and 11 · macOS 13 and later · English &amp; Tagalog · No account · No ads · Works offline · <a href="https://github.com/jsmejia27/ScreenRest" rel="noopener" style="color:inherit">Open source (MIT)</a></p>
@@ -503,12 +507,23 @@ footer nav a{text-decoration:none;color:var(--night-ink)}
     <div class="section-head reveal">
       <span class="eyebrow">Download</span>
       <h2>Get ScreenRest free</h2>
-      <p class="lead">Free to download and use. No trial, no account, no catch. Files come from the official <a href="https://github.com/jsmejia27/ScreenRest/releases/latest" rel="noopener">GitHub release</a>, next to the full source code. Pick your system below. Coming soon to the Microsoft Store, too.</p>
+      <p class="lead">Free to download and use. No trial, no account, no catch. Files come from the official <a href="https://github.com/jsmejia27/ScreenRest/releases/latest" rel="noopener">GitHub release</a>, next to the full source code. Pick your system below. On Windows you can also get it from the <a href="https://apps.microsoft.com/detail/9P8LKK7JSWW9" rel="noopener">Microsoft Store</a>.</p>
     </div>
     <h3 class="plat reveal"><svg><use href="#win"/></svg>Windows 10 and 11</h3>
-    <div class="dl-grid">
+    <div class="dl-grid three">
       <div class="dl main reveal">
         <span class="badge">Recommended for Windows</span>
+        <h3>Microsoft Store</h3>
+        <p>One click to install. Signed by Microsoft, so there's no SmartScreen warning, and the Store keeps ScreenRest up to date for you.</p>
+        <dl>
+          <dt>Store ID</dt><dd>9P8LKK7JSWW9</dd>
+          <dt>Price</dt><dd>Free</dd>
+          <dt>Updates</dt><dd>Automatic</dd>
+        </dl>
+        <a class="btn btn-primary" href="https://apps.microsoft.com/detail/9P8LKK7JSWW9?mode=direct" rel="noopener"><svg><use href="#store"/></svg>Get it from Microsoft</a>
+        <p class="alt">Opens the Microsoft Store app. <a href="https://apps.microsoft.com/detail/9P8LKK7JSWW9" rel="noopener">View the Store page</a> in your browser.</p>
+      </div>
+      <div class="dl reveal">
         <h3>Windows installer</h3>
         <p>Installs for your user account, adds ScreenRest to the Start menu and can start it automatically when you sign in.</p>
         <dl>
@@ -516,7 +531,7 @@ footer nav a{text-decoration:none;color:var(--night-ink)}
           <dt>Size</dt><dd>43 MB</dd>
           <dt>SHA-256</dt><dd class="hash">D23924C862E9EAD06C56F27D1F33D4EBCEA5D874F4EE7BEAEF132BE3A165A841</dd>
         </dl>
-        <a class="btn btn-primary" href="https://github.com/jsmejia27/ScreenRest/releases/download/v1.1.1/ScreenRest-Setup-1.1.1.exe"><svg><use href="#dl"/></svg>Download installer</a>
+        <a class="btn btn-outline" href="https://github.com/jsmejia27/ScreenRest/releases/download/v1.1.1/ScreenRest-Setup-1.1.1.exe"><svg><use href="#dl"/></svg>Download installer</a>
       </div>
       <div class="dl reveal">
         <h3>Portable version</h3>
@@ -558,7 +573,7 @@ footer nav a{text-decoration:none;color:var(--night-ink)}
     <div class="notices">
       <div class="notice reveal">
         <svg><use href="#warn"/></svg>
-        <p><b>Seeing "Windows protected your PC"?</b> ScreenRest isn't code-signed yet, so Microsoft SmartScreen may show a blue warning the first time. Click <b>More info</b>, then <b>Run anyway</b>. To check your download, compare its SHA-256 above (in PowerShell: <code>Get-FileHash .\ScreenRest-Setup-1.1.1.exe</code>).</p>
+        <p><b>Seeing "Windows protected your PC"?</b> The Microsoft Store version never shows this. The direct downloads aren't code-signed yet, so Microsoft SmartScreen may show a blue warning the first time. Click <b>More info</b>, then <b>Run anyway</b>. To check your download, compare its SHA-256 above (in PowerShell: <code>Get-FileHash .\ScreenRest-Setup-1.1.1.exe</code>).</p>
       </div>
       <div class="notice reveal">
         <svg><use href="#warn"/></svg>
@@ -602,7 +617,7 @@ footer nav a{text-decoration:none;color:var(--night-ink)}
     <h2>Start your next break in under a minute</h2>
     <p class="lead">Your eyes will notice by the end of the week. Your back will thank you sooner.</p>
     <div class="hero-cta" style="justify-content:center">
-      <a class="btn btn-primary" data-os="win" href="https://github.com/jsmejia27/ScreenRest/releases/download/v1.1.1/ScreenRest-Setup-1.1.1.exe"><svg><use href="#win"/></svg>Download for Windows</a>
+      <a class="btn btn-primary" data-os="win" href="https://apps.microsoft.com/detail/9P8LKK7JSWW9?mode=direct" rel="noopener"><svg><use href="#win"/></svg>Get it on Microsoft Store</a>
       <a class="btn btn-primary" data-os="mac" href="https://github.com/jsmejia27/ScreenRest/releases/download/v1.1.1/ScreenRest-1.1.1-mac.dmg"><svg><use href="#apple"/></svg>Download for Mac</a>
     </div>
   </div>

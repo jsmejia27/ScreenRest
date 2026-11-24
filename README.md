@@ -7,15 +7,15 @@ A free, open-source break coach for **Windows and macOS** that covers your work 
 | | Windows | macOS |
 |---|---|---|
 | Runs on | Windows 10 and 11 (.NET Framework 4.x, built in) | macOS 13 Ventura and later, Apple silicon and Intel |
-| Download | `ScreenRest-Setup-x.y.z.exe` installer, or portable zip | `ScreenRest-x.y.z-mac.dmg`, or zip |
+| Download | [Microsoft Store](https://apps.microsoft.com/detail/9P8LKK7JSWW9), `ScreenRest-Setup-x.y.z.exe` installer, or portable zip | `ScreenRest-x.y.z-mac.dmg`, or zip |
 | Lives in | System tray, near the clock | Menu bar, top right |
 | Source | [`src/`](src/) (C#, WinForms) | [`mac/`](mac/README.md) (Swift, AppKit) |
 
 No internet, no account, no ads. English and Tagalog. Both versions have the same breaks, exercises, videos, voice-overs and stats, and use the same settings and history file format.
 
-**[🌐 Website: screenrest.jilbert.net](https://screenrest.jilbert.net/)** · **[⬇ Get the latest release](https://github.com/jsmejia27/ScreenRest/releases/latest)**
+**[🌐 Website: screenrest.jilbert.net](https://screenrest.jilbert.net/)** · **[⬇ Get the latest release](https://github.com/jsmejia27/ScreenRest/releases/latest)** · **[🪟 Get it from the Microsoft Store](https://apps.microsoft.com/detail/9P8LKK7JSWW9)**
 
-> The downloads aren't code-signed or notarized yet.
+> The Microsoft Store version is signed by Microsoft and updates itself. The direct downloads aren't code-signed or notarized yet.
 > - **Windows:** SmartScreen may say *"Windows protected your PC"*. Click **More info → Run anyway**.
 > - **Mac:** macOS may say ScreenRest *"can't be opened"* or can't be checked for malware. Click **Done**, then go to **System Settings → Privacy & Security** and click **Open Anyway**. You only do this once. On macOS 13 and 14, Control-click → **Open** also works.
 >
