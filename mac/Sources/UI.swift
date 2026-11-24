@@ -80,63 +80,6 @@ final class ActionMenuItem: NSMenuItem {
     @objc private func fire() { handler() }
 }
 
-/// Integer field with a stepper, clamped to [min, max] (the WinForms NumericUpDown).
-final class NumField: NSStackView {
-    private let field = NSTextField()
-    private let stepper = NSStepper()
-    private let minV: Int, maxV: Int
-
-    init(_ min: Int, _ max: Int, _ value: Int) {
-        minV = min; maxV = max
-        super.init(frame: .zero)
-        orientation = .horizontal
-        spacing = 2
-        let f = NumberFormatter()
-        f.numberStyle = .none
-        f.allowsFloats = false
-        field.formatter = f
-        field.alignment = .right
-        field.widthAnchor.constraint(equalToConstant: 52).isActive = true
-        stepper.minValue = Double(min)
-        stepper.maxValue = Double(max)
-        stepper.increment = 1
-        stepper.valueWraps = false
-        stepper.target = self
-        stepper.action = #selector(stepped)
-        field.target = self
-        field.action = #selector(typed)
-        addArrangedSubview(field)
-        addArrangedSubview(stepper)
-        self.value = value
-    }
-    required init?(coder: NSCoder) { fatalError() }
-
-    var value: Int {
-        get { Swift.max(minV, Swift.min(maxV, Int(field.stringValue.trimmingCharacters(in: .whitespaces)) ?? minV)) }
-        set {
-            let v = Swift.max(minV, Swift.min(maxV, newValue))
-            field.integerValue = v
-            stepper.integerValue = v
-        }
-    }
-    @objc private func stepped() { value = stepper.integerValue }
-    @objc private func typed() { value = value }
-}
-
-/// Hour:minute picker (24-hour), holding "minutes after midnight".
-func timePicker(_ minutes: Int) -> NSDatePicker {
-    let p = NSDatePicker()
-    p.datePickerStyle = .textFieldAndStepper
-    p.datePickerElements = .hourMinute
-    p.locale = Locale(identifier: "en_GB") // 24-hour clock, like the Windows build
-    setMinutes(p, minutes)
-    return p
-}
-func setMinutes(_ p: NSDatePicker, _ minutes: Int) {
-    p.dateValue = Calendar.current.date(byAdding: .minute, value: minutes, to: Calendar.current.startOfDay(for: Date()))!
-}
-func minutes(_ p: NSDatePicker) -> Int { Settings.minuteOfDay(p.dateValue) }
-
 func activateApp() {
     if #available(macOS 14.0, *) { NSApp.activate() } else { NSApp.activate(ignoringOtherApps: true) }
 }

@@ -24,7 +24,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var breakCtl: BreakController?
     private var dims: [NSWindow] = []
     private var windows: [BaseWindowController] = []
-    private weak var settingsCtl: SettingsController?
+    private var settingsWC: SettingsWindowController?
+    private var dashboardWC: DashboardWindowController?
+    private var menuLanguage = ""
     private weak var checkInCtl: CheckInController?
 
     // ---- intervals (seconds); demo mode shrinks them so you can try it in 2 minutes ----
@@ -129,12 +131,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         menu.addItem(resumeItem)
         menu.addItem(.separator())
-        menu.addItem(ActionMenuItem(L.t("Today's stats", "Stats ngayong araw")) { [weak self] in self?.showStats() })
-        menu.addItem(ActionMenuItem(L.t("Weekly summary", "Buod ng linggo")) { [weak self] in self?.showWeekly() })
-        menu.addItem(ActionMenuItem(L.t("Health trend (eye and energy)...", "Takbo ng kalusugan (mata at lakas)...")) { [weak self] in
-            guard let self = self else { return }
-            self.present(TrendController(self.stats))
-        })
+        menu.addItem(ActionMenuItem(L.t("Dashboard...", "Dashboard..."), key: "d") { [weak self] in self?.showDashboard(range: 1) })
         menu.addItem(ActionMenuItem(L.t("Daily check-in...", "Pang-araw-araw na check-in...")) { [weak self] in self?.showCheckIn(false) })
         menu.addItem(.separator())
         menu.addItem(ActionMenuItem(L.t("Settings...", "Settings..."), key: ",") { [weak self] in self?.showSettings() })
@@ -289,10 +286,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         present(c) { [weak self] in if thenWeekly { self?.showWeekly() } }
     }
 
-    private func showWeekly() {
-        stats.save()
-        present(ReportController(title: L.t("ScreenRest: weekly summary", "ScreenRest: buod ng linggo"), text: DayStats.weeklyReport(stats)))
-    }
+    /// End of the week: the dashboard opens on the last 7 days.
+    private func showWeekly() { showDashboard(range: 7) }
 
     private func resetEye() { sinceEye = 0; eyeWarned = false; sinceBlink = 0 }
     private func resetStretch() { sinceStretch = 0; stretchWarned = false }
@@ -404,23 +399,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func balloon(_ title: String, _ text: String) { Notifier.shared.post(title, text) }
 
-    private func showStats() {
+    private func showDashboard(range: Int) {
         stats.save()
-        present(ReportController(title: L.t("ScreenRest: stats", "ScreenRest: stats"), text: DayStats.report(stats)))
+        if let d = dashboardWC { d.present(range: range); return }
+        let d = DashboardWindowController(range: range,
+                                          today: { [weak self] in self?.stats ?? DayStats.loadToday() },
+                                          checkInEnabled: { [weak self] in self?.s.dailyCheckIn ?? true },
+                                          onCheckIn: { [weak self] in self?.showCheckIn(false) })
+        d.closed = { [weak self] in self?.dashboardWC = nil }
+        dashboardWC = d
+        d.present()
     }
 
+    /// Settings apply as they change (macOS style), straight into the live Settings object.
     private func showSettings() {
-        if let c = settingsCtl { c.present(); return }
-        let c = SettingsController(s)
-        c.saved = { [weak self] in
+        if let c = settingsWC { c.present(); return }
+        let c = SettingsWindowController(s)
+        menuLanguage = s.language
+        c.model.changed = { [weak self, weak c] in
             guard let self = self else { return }
-            self.s = Settings.load()
-            L.set(self.s.language)
-            self.buildMenu()
-            self.balloon(L.t("Settings saved", "Na-save ang settings"), self.statusText())
+            if self.s.language != self.menuLanguage {
+                self.menuLanguage = self.s.language
+                L.set(self.s.language)
+                self.buildMenu()
+                self.dashboardWC?.model.reload()
+            }
+            c?.settingsChanged()
+            self.refresh()
         }
-        settingsCtl = c
-        present(c) { [weak self] in self?.refresh() }
+        c.closed = { [weak self] in self?.settingsWC = nil; self?.refresh() }
+        settingsWC = c
+        c.present()
     }
 
     /// Shows a window and keeps it alive until it closes.

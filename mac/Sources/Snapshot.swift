@@ -35,11 +35,34 @@ enum Snapshot {
 
         win(WelcomeController(s), "welcome", bg: Brand.bg)
         win(AboutController(), "about", bg: Brand.bg)
-        win(SettingsController(s), "settings")
         win(CheckInController(today), "checkin")
-        win(ReportController(title: "stats", text: DayStats.report(today)), "stats")
-        win(ReportController(title: "weekly", text: DayStats.weeklyReport(today)), "weekly")
-        win(TrendController(today), "trend", bg: .white)
+
+        // SwiftUI windows need a real (invisible) window and a moment to lay out.
+        func live(_ w: NSWindow, _ name: String) {
+            for (mode, look) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+                w.appearance = NSAppearance(named: look)
+                w.alphaValue = 0
+                w.orderFrontRegardless()
+                RunLoop.main.run(until: Date().addingTimeInterval(1.0))
+                guard let frame = w.contentView?.superview else { continue }
+                NSAppearance(named: look)!.performAsCurrentDrawingAppearance {
+                    save(frame, "\(name)-\(mode)", bg: look == .aqua ? .white : NSColor(white: 0.12, alpha: 1))
+                }
+            }
+            w.orderOut(nil)
+        }
+        let settings = SettingsWindowController(s)
+        if let tabs = settings.window?.contentViewController as? NSTabViewController {
+            for (i, pane) in ["general", "schedule", "breaks", "smart"].enumerated() {
+                tabs.selectedTabViewItemIndex = i
+                settings.updateLabels()
+                live(settings.window!, "settings-" + pane)
+            }
+        }
+        for (r, name) in [(1, "today"), (7, "week"), (30, "month")] {
+            let d = DashboardWindowController(range: r, today: { today }, checkInEnabled: { true }, onCheckIn: {})
+            live(d.window!, "dashboard-" + name)
+        }
 
         let screen = NSScreen.main ?? NSScreen.screens[0]
         var opt = BreakOptions()

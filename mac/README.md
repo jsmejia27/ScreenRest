@@ -1,6 +1,8 @@
 # ScreenRest for macOS
 
-A native port of ScreenRest (Swift + AppKit) for macOS 13 Ventura and later, on Apple silicon and Intel. It lives in the menu bar and has the same features as the Windows app: eye and stretch breaks with video and voice, shift schedule and lunch, idle detection, holding breaks during calls, the hands-off check, strict mode, daily check-in, health trend, weekly summary, English and Tagalog.
+A native port of ScreenRest (Swift + AppKit) for macOS 13 Ventura and later, on Apple silicon and Intel. It lives in the menu bar and has the same features as the Windows app: eye and stretch breaks with video and voice, shift schedule and lunch, idle detection, holding breaks during calls, the hands-off check, strict mode, daily check-in, English and Tagalog.
+
+The Mac version also has its own native touches: a System Settings-style **Settings** window (toolbar panes, changes apply as you make them, live summaries such as how many breaks a shift gives you) and a **Dashboard** (menu bar → Dashboard…, ⌘D) with today / 7 / 30-day summary cards, charts of breaks and check-in ratings, and short insights worked out from your own history. Both follow light and dark mode.
 
 ## Build
 
@@ -53,8 +55,9 @@ Demo mode gives an eye break every 30 s and a stretch break every 90 s, ignores 
 | `Sources/StatusApp.swift` | Menu bar item, menu, shift schedule, timers, idle detection (port of `TrayApp.cs`) |
 | `Sources/BreakWindow.swift` | Full-screen guided break: video, voice, hands-off check, dim overlay for other screens |
 | `Sources/Native.swift` | Idle time; camera, mic and full-screen detection |
-| `Sources/SettingsWindow.swift` | Settings window |
-| `Sources/HealthWindows.swift` | Daily check-in, reports, 30-day trend chart |
+| `Sources/SettingsWindow.swift` | Settings: toolbar panes (General, Schedule, Breaks, Smart) with grouped SwiftUI forms; changes apply immediately |
+| `Sources/Dashboard.swift` | Dashboard: today / 7 / 30 days, summary cards, Swift Charts, insights from your own history |
+| `Sources/HealthWindows.swift` | Daily check-in |
 | `Sources/AppWindows.swift` | Welcome and About windows |
 | `Sources/Notifier.swift` | Notifications with toast fallback |
 | `Sources/Settings.swift`, `Stats.swift`, `Exercises.swift`, `Lang.swift` | Same models as the Windows app |

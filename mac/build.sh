@@ -20,10 +20,13 @@ ARCHS="${ARCHS:-arm64 x86_64}"
 mkdir -p "$OUT" "$APP/Contents/MacOS" "$APP/Contents/Resources/media"
 
 echo "==> Compiling ($ARCHS)"
+# Compile a snapshot of the sources: iCloud Drive can touch files mid-build ("modified during the build").
+mkdir -p "$STAGE/src"
+cp "$HERE"/Sources/*.swift "$STAGE/src/"
 BINS=()
 for arch in $ARCHS; do
     swiftc -O -swift-version 5 -target "$arch-apple-macos13.0" \
-        -o "$STAGE/ScreenRest-$arch" "$HERE"/Sources/*.swift
+        -o "$STAGE/ScreenRest-$arch" "$STAGE"/src/*.swift
     BINS+=("$STAGE/ScreenRest-$arch")
 done
 lipo -create "${BINS[@]}" -output "$APP/Contents/MacOS/ScreenRest"
