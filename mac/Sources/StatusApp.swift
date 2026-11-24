@@ -20,11 +20,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var wasActive = false, inBreak = false
     private var deferring = false, deferReason = "", freeTicks = 0 // break held while in a call / full-screen app
     private var greetedDate: Date?, summaryDate: Date?
+    private var movedForMeeting: String? // calendar event a stretch break was already moved for
 
     private var breakCtl: BreakController?
     private var dims: [NSWindow] = []
     private var windows: [BaseWindowController] = []
-    private weak var settingsCtl: SettingsController?
+    private var settingsWC: SettingsWindowController?
+    private var dashboardWC: DashboardWindowController?
+    private var menuLanguage = ""
     private weak var checkInCtl: CheckInController?
 
     // ---- intervals (seconds); demo mode shrinks them so you can try it in 2 minutes ----
@@ -48,7 +51,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         installMainMenu()
         Notifier.shared.setup()
 
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem.button?.imagePosition = .imageLeading
+        statusItem.button?.font = .monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
         statusItem.button?.image = icoActive
         statusItem.button?.toolTip = "ScreenRest"
         buildMenu()
@@ -129,12 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         menu.addItem(resumeItem)
         menu.addItem(.separator())
-        menu.addItem(ActionMenuItem(L.t("Today's stats", "Stats ngayong araw")) { [weak self] in self?.showStats() })
-        menu.addItem(ActionMenuItem(L.t("Weekly summary", "Buod ng linggo")) { [weak self] in self?.showWeekly() })
-        menu.addItem(ActionMenuItem(L.t("Health trend (eye and energy)...", "Takbo ng kalusugan (mata at lakas)...")) { [weak self] in
-            guard let self = self else { return }
-            self.present(TrendController(self.stats))
-        })
+        menu.addItem(ActionMenuItem(L.t("Dashboard...", "Dashboard..."), key: "d") { [weak self] in self?.showDashboard(range: 1) })
         menu.addItem(ActionMenuItem(L.t("Daily check-in...", "Pang-araw-araw na check-in...")) { [weak self] in self?.showCheckIn(false) })
         menu.addItem(.separator())
         menu.addItem(ActionMenuItem(L.t("Settings...", "Settings..."), key: ",") { [weak self] in self?.showSettings() })
@@ -209,7 +209,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         if let due = due {
             // Never pop up in the middle of a video call, presentation or full-screen video.
-            if s.deferDuringMeetings, let why = Native.isBusy() {
+            let why = (s.deferDuringMeetings ? Native.isBusy() : nil) ?? meetingReason()
+            if let why = why {
                 if !deferring {
                     deferring = true
                     deferReason = why
@@ -231,6 +232,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
 
+        if moveStretchBeforeMeeting(toStretch) { refresh(); return }
+
         if !stretchWarned && stretchWarn > 0 && toStretch <= stretchWarn {
             stretchWarned = true
             balloon(L.t("Stretch break in \(toStretch) seconds", "Stretch break sa loob ng \(toStretch) segundo"),
@@ -247,6 +250,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                         "Kumurap nang dahan-dahan nang ilang beses, at i-relax ang mga balikat."))
         }
         refresh()
+    }
+
+    // ------------------------------------------------------------------ calendar
+    /// "you're in a meeting" while a calendar event you're busy for is on (Settings → Use my calendar).
+    private func meetingReason() -> String? {
+        guard s.useCalendar, !demo, let e = CalendarWatch.shared.meetingNow() else { return nil }
+        let title = (e.title ?? "").trimmingCharacters(in: .whitespaces)
+        return title.isEmpty ? L.t("you're in a meeting", "nasa meeting ka")
+                             : L.t("you're in “\(title)”", "nasa “\(title)” ka")
+    }
+
+    /// If the next stretch break would land in a meeting, start it now (after the usual heads-up) instead.
+    private func moveStretchBeforeMeeting(_ toStretch: Int) -> Bool {
+        guard s.useCalendar, !demo, toStretch > stretchWarn, toStretch <= 20 * 60 else { return false }
+        let needed = TimeInterval(stretchLength + stretchWarn + 60) // the break, its heads-up, and a minute to spare
+        guard let e = CalendarWatch.shared.meetingStarting(within: TimeInterval(toStretch + stretchLength)),
+              e.eventIdentifier != movedForMeeting,
+              e.startDate.timeIntervalSinceNow >= needed else { return false }
+        movedForMeeting = e.eventIdentifier
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        sinceStretch = max(0, stretchEvery - stretchWarn)
+        stretchWarned = true
+        balloon(L.t("Stretch break moved before your \(f.string(from: e.startDate)) meeting",
+                    "Inilipat ang stretch break bago ang meeting mo nang \(f.string(from: e.startDate))"),
+                stretchWarn > 0
+                    ? L.t("It starts in \(stretchWarn) seconds, so it won't interrupt the meeting.",
+                          "Magsisimula ito sa loob ng \(stretchWarn) segundo, para hindi maabala ang meeting.")
+                    : L.t("It starts now, so it won't interrupt the meeting.", "Magsisimula na ito, para hindi maabala ang meeting."))
+        return true
     }
 
     private func onShiftEnter(_ now: Date) {
@@ -289,10 +322,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         present(c) { [weak self] in if thenWeekly { self?.showWeekly() } }
     }
 
-    private func showWeekly() {
-        stats.save()
-        present(ReportController(title: L.t("ScreenRest: weekly summary", "ScreenRest: buod ng linggo"), text: DayStats.weeklyReport(stats)))
-    }
+    /// End of the week: the dashboard opens on the last 7 days.
+    private func showWeekly() { showDashboard(range: 7) }
 
     private func resetEye() { sinceEye = 0; eyeWarned = false; sinceBlink = 0 }
     private func resetStretch() { sinceStretch = 0; stretchWarned = false }
@@ -321,7 +352,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             d.orderFrontRegardless()
         }
         let ctl = BreakController(kind: kind, steps: steps, screen: target, options: opt)
-        ctl.onFinish = { [weak self] r in self?.endBreak(kind, r) }
+        ctl.onFinish = { [weak self, weak ctl] r in
+            if let c = ctl {
+                BreakLog.append(BreakEntry(time: Date(), kind: kind, result: r, plannedSec: c.plannedSeconds,
+                                           takenSec: c.elapsedSeconds, pausedSec: c.pausedSeconds))
+            }
+            self?.endBreak(kind, r)
+        }
         breakCtl = ctl
         ctl.show()
         if s.strictMode {
@@ -400,27 +437,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let now = Date()
         let idleState = now < pausedUntil || (!demo && !s.isActiveTime(now))
         button.image = inBreak ? icoDue : idleState ? icoPaused : icoActive
+        // Optional countdown next to the icon: minutes (or seconds in the last minute) to the next break.
+        if s.menuBarCountdown && !inBreak && !idleState && !deferring {
+            let next = max(0, min(eyeEvery - sinceEye, stretchEvery - sinceStretch))
+            button.title = next >= 60 ? " \(next / 60)m" : " \(next)s"
+        } else {
+            button.title = ""
+        }
     }
 
     private func balloon(_ title: String, _ text: String) { Notifier.shared.post(title, text) }
 
-    private func showStats() {
+    private func showDashboard(range: Int) {
         stats.save()
-        present(ReportController(title: L.t("ScreenRest: stats", "ScreenRest: stats"), text: DayStats.report(stats)))
+        if let d = dashboardWC { d.present(range: range); return }
+        let d = DashboardWindowController(range: range,
+                                          today: { [weak self] in self?.stats ?? DayStats.loadToday() },
+                                          checkInEnabled: { [weak self] in self?.s.dailyCheckIn ?? true },
+                                          onCheckIn: { [weak self] in self?.showCheckIn(false) })
+        d.closed = { [weak self] in self?.dashboardWC = nil }
+        dashboardWC = d
+        d.present()
     }
 
+    /// Settings apply as they change (macOS style), straight into the live Settings object.
     private func showSettings() {
-        if let c = settingsCtl { c.present(); return }
-        let c = SettingsController(s)
-        c.saved = { [weak self] in
+        if let c = settingsWC { c.present(); return }
+        let c = SettingsWindowController(s)
+        menuLanguage = s.language
+        c.model.changed = { [weak self, weak c] in
             guard let self = self else { return }
-            self.s = Settings.load()
-            L.set(self.s.language)
-            self.buildMenu()
-            self.balloon(L.t("Settings saved", "Na-save ang settings"), self.statusText())
+            if self.s.language != self.menuLanguage {
+                self.menuLanguage = self.s.language
+                L.set(self.s.language)
+                self.buildMenu()
+                self.dashboardWC?.model.reload()
+            }
+            c?.settingsChanged()
+            self.refresh()
         }
-        settingsCtl = c
-        present(c) { [weak self] in self?.refresh() }
+        c.closed = { [weak self] in self?.settingsWC = nil; self?.refresh() }
+        settingsWC = c
+        c.present()
     }
 
     /// Shows a window and keeps it alive until it closes.

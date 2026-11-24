@@ -1,192 +1,496 @@
 import AppKit
+import SwiftUI
 
-/// Settings window (port of SettingsForm.cs), laid out in two columns.
-final class SettingsController: BaseWindowController {
-    var saved: (() -> Void)?
-    private let s: Settings
+// Settings window in the macOS style: a fixed toolbar of panes (General, Schedule, Breaks, Smart),
+// each a grouped form like System Settings. Changes apply as you make them; there is no Save button.
 
-    private let cmbLang = NSPopUpButton()
-    private let dtStart: NSDatePicker, dtEnd: NSDatePicker, dtLunchS: NSDatePicker, dtLunchE: NSDatePicker
-    private var days: [NSButton] = []
-    private let chkLunch, chkStrict, chkSounds, chkStartup, chkBlink, chkVoice, chkDefer, chkHandsOff, chkCheckIn: NSButton
-    private let nMicroI, nMicroD, nLongI, nLongD, nWarn, nPostMax, nPostMin, nIdle, nBlink: NumField
+/// Shares the app's live Settings object with the SwiftUI panes and saves changes to disk.
+final class SettingsModel: ObservableObject {
+    let s: Settings
+    /// Called after every applied change (the app refreshes its menu and status).
+    var changed: (() -> Void)?
+    private var saveWork: DispatchWorkItem?
+    @Published var startupError: String?
 
-    init(_ settings: Settings) {
-        s = settings
-        dtStart = timePicker(s.shiftStartMin); dtEnd = timePicker(s.shiftEndMin)
-        dtLunchS = timePicker(s.lunchStartMin); dtLunchE = timePicker(s.lunchEndMin)
-        func chk(_ title: String, _ on: Bool) -> NSButton {
-            let b = NSButton(checkboxWithTitle: title, target: nil, action: nil)
-            b.state = on ? .on : .off
-            return b
-        }
-        chkLunch = chk(L.t("Pause reminders during lunch", "I-pause ang paalala tuwing tanghalian"), s.lunchEnabled)
-        chkVoice = chk(L.t("Voice guidance (so your eyes can leave the screen)",
-                           "Gabay na boses, sa English (para makaalis ang mata sa screen)"), s.voiceGuide)
-        chkDefer = chk(L.t("Hold breaks during calls and full-screen apps",
-                           "I-hold ang break habang may tawag o full-screen app"), s.deferDuringMeetings)
-        chkHandsOff = chk(L.t("Pause the break timer while I keep typing or using the mouse",
-                              "I-pause ang timer ng break kapag nagta-type o gumagamit pa ako ng mouse"), s.handsOffCheck)
-        chkCheckIn = chk(L.t("End-of-shift check-in (eye blur and energy)",
-                             "Check-in sa dulo ng shift (labo ng mata at lakas)"), s.dailyCheckIn)
-        chkStrict = chk(L.t("Strict mode: breaks can't be skipped or postponed",
-                            "Strict mode: hindi puwedeng laktawan o ipagpaliban ang break"), s.strictMode)
-        chkSounds = chk(L.t("Play sounds", "Magpatunog"), s.sounds)
-        chkBlink = chk(L.t("Gentle \"blink\" notifications between breaks",
-                           "Mahinahong paalalang \"kumurap\" sa pagitan ng breaks"), s.blinkNudges)
-        chkStartup = chk(L.t("Open ScreenRest when I log in to my Mac", "Buksan ang ScreenRest pag-log in ko sa Mac"),
-                         Settings.startupEnabled)
-        nMicroI = NumField(5, 120, s.microIntervalMin); nMicroD = NumField(10, 120, s.microDurationSec)
-        nLongI = NumField(15, 180, s.longIntervalMin); nLongD = NumField(1, 20, s.longDurationMin)
-        nWarn = NumField(0, 120, s.warningSec); nPostMin = NumField(1, 30, s.postponeMin)
-        nPostMax = NumField(0, 10, s.maxPostpones); nIdle = NumField(1, 60, s.idleResetMin)
-        nBlink = NumField(5, 60, s.blinkEveryMin)
-        super.init(title: L.t("ScreenRest Settings", "ScreenRest Settings"))
-        build()
-    }
-    required init?(coder: NSCoder) { fatalError() }
+    init(_ s: Settings) { self.s = s }
 
-    private func build() {
-        cmbLang.addItems(withTitles: ["English", "Tagalog"])
-        cmbLang.selectItem(at: s.language == "tl" ? 1 : 0)
-        for i in 0..<7 {
-            let b = NSButton(checkboxWithTitle: L.day(i), target: nil, action: nil)
-            b.state = s.workDays[i] ? .on : .off
-            days.append(b)
-        }
-
-        // Left column: language, shift, break lengths
-        let left = Form()
-        left.section(L.t("Language", "Wika"))
-        left.row(L.t("Language / Wika", "Wika / Language"), cmbLang)
-        left.section(L.t("Work shift", "Shift sa trabaho"))
-        left.row(L.t("Shift starts", "Simula ng shift"), dtStart)
-        left.row(L.t("Shift ends", "Tapos ng shift"), dtEnd)
-        left.row(L.t("Work days", "Araw ng trabaho"), hstack(days, spacing: 6))
-        left.full(chkLunch)
-        left.row(L.t("Lunch", "Tanghalian"), hstack([dtLunchS, label(L.t("to", "hanggang")), dtLunchE]))
-        left.section(L.t("Eye break (20-20-20 rule)", "Eye break (20-20-20 rule)"))
-        left.row(L.t("Every (minutes)", "Tuwing (minuto)"), nMicroI)
-        left.row(L.t("Lasts (seconds)", "Tagal (segundo)"), nMicroD)
-        left.section(L.t("Stand-up and stretch break", "Tayo at stretch break"))
-        left.row(L.t("Every (minutes)", "Tuwing (minuto)"), nLongI)
-        left.row(L.t("Lasts (minutes)", "Tagal (minuto)"), nLongD)
-
-        // Right column: guidance and behaviour
-        let right = Form()
-        right.section(L.t("Guidance and smart breaks", "Gabay at matalinong breaks"))
-        right.full(chkVoice)
-        right.full(chkDefer)
-        right.full(chkHandsOff)
-        right.full(chkCheckIn)
-        right.section(L.t("Behaviour", "Kilos ng app"))
-        right.row(L.t("Heads-up before stretch break (s)", "Paalala bago ang stretch break (s)"), nWarn)
-        right.row(L.t("Postpone by (minutes)", "Ipagpaliban nang (minuto)"), nPostMin)
-        right.row(L.t("Max postpones in a row", "Pinakamaraming sunod na pagpapaliban"), nPostMax)
-        right.row(L.t("Away this long counts as a break (min)", "Ganito katagal na wala = break na (min)"), nIdle)
-        right.full(chkStrict)
-        right.full(chkSounds)
-        right.full(chkBlink)
-        right.row(L.t("Blink reminder every (min)", "Paalalang kumurap tuwing (min)"), nBlink)
-        if Settings.canManageStartup { right.full(chkStartup) }
-
-        let columns = hstack([left.grid, right.grid], spacing: 36)
-        columns.alignment = .top
-
-        let reset = ActionButton(L.t("Reset to defaults", "Ibalik sa default")) { [weak self] in self?.apply(Settings()) }
-        let cancel = ActionButton(L.t("Cancel", "Kanselahin")) { [weak self] in self?.close() }
-        cancel.keyEquivalent = "\u{1b}"
-        let save = ActionButton(L.t("Save", "I-save"), primary: true) { [weak self] in self?.onSave() }
-        let buttons = hstack([reset, spacer(), cancel, save], spacing: 10)
-
-        let body = vstack([columns, buttons], spacing: 20)
-        buttons.widthAnchor.constraint(equalTo: body.widthAnchor).isActive = true
-        setContent(padded(body, NSEdgeInsets(top: 18, left: 22, bottom: 18, right: 22)))
+    /// Two-way binding to one setting. Setting it applies the change straight away.
+    func b<T>(_ kp: ReferenceWritableKeyPath<Settings, T>) -> Binding<T> {
+        Binding(get: { self.s[keyPath: kp] },
+                set: { v in
+                    self.objectWillChange.send()
+                    self.s[keyPath: kp] = v
+                    self.applied()
+                })
     }
 
-    private func apply(_ d: Settings) {
-        // Language is a personal choice, so "Reset to defaults" leaves it alone.
-        setMinutes(dtStart, d.shiftStartMin); setMinutes(dtEnd, d.shiftEndMin)
-        for i in 0..<7 { days[i].state = d.workDays[i] ? .on : .off }
-        chkLunch.state = d.lunchEnabled ? .on : .off
-        setMinutes(dtLunchS, d.lunchStartMin); setMinutes(dtLunchE, d.lunchEndMin)
-        nMicroI.value = d.microIntervalMin; nMicroD.value = d.microDurationSec
-        nLongI.value = d.longIntervalMin; nLongD.value = d.longDurationMin
-        nWarn.value = d.warningSec; nPostMin.value = d.postponeMin; nPostMax.value = d.maxPostpones
-        nIdle.value = d.idleResetMin
-        chkStrict.state = d.strictMode ? .on : .off; chkSounds.state = d.sounds ? .on : .off
-        chkBlink.state = d.blinkNudges ? .on : .off; nBlink.value = d.blinkEveryMin
-        chkVoice.state = d.voiceGuide ? .on : .off
-        chkDefer.state = d.deferDuringMeetings ? .on : .off
-        chkHandsOff.state = d.handsOffCheck ? .on : .off; chkCheckIn.state = d.dailyCheckIn ? .on : .off
+    /// Binding for a "minutes after midnight" setting, shown in a time picker.
+    func time(_ kp: ReferenceWritableKeyPath<Settings, Int>) -> Binding<Date> {
+        Binding(get: { Calendar.current.date(byAdding: .minute, value: self.s[keyPath: kp],
+                                             to: Calendar.current.startOfDay(for: Date()))! },
+                set: { d in
+                    self.objectWillChange.send()
+                    self.s[keyPath: kp] = Settings.minuteOfDay(d)
+                    self.applied()
+                })
     }
 
-    private func warn(_ text: String) {
-        let a = NSAlert()
-        a.messageText = "ScreenRest"
-        a.informativeText = text
-        a.alertStyle = .warning
-        if let w = window { a.beginSheetModal(for: w) } else { a.runModal() }
+    func day(_ i: Int) -> Binding<Bool> {
+        Binding(get: { self.s.workDays[i] },
+                set: { v in
+                    self.objectWillChange.send()
+                    self.s.workDays[i] = v
+                    self.applied()
+                })
     }
 
-    private func onSave() {
-        window?.makeFirstResponder(nil) // commit a number that is still being typed
-        if minutes(dtEnd) <= minutes(dtStart) {
-            warn(L.t("The shift has to end after it starts.", "Dapat matapos ang shift pagkatapos nitong magsimula."))
-            return
+    var startup: Binding<Bool> {
+        Binding(get: { Settings.startupEnabled },
+                set: { v in
+                    self.objectWillChange.send()
+                    do { try Settings.setStartup(v); self.startupError = nil }
+                    catch { self.startupError = error.localizedDescription }
+                })
+    }
+
+    @Published var calendarNote: String?
+
+    /// Turning the calendar on asks macOS for access first; it stays off if access is refused.
+    var calendar: Binding<Bool> {
+        Binding(get: { self.s.useCalendar },
+                set: { v in
+                    guard v else { self.set(\.useCalendar, false); self.calendarNote = nil; return }
+                    if CalendarWatch.shared.authorized { self.set(\.useCalendar, true); return }
+                    CalendarWatch.shared.requestAccess { ok in
+                        self.set(\.useCalendar, ok)
+                        self.calendarNote = ok ? nil : L.t("Calendar access is off. Allow ScreenRest in System Settings → Privacy & Security → Calendars.",
+                                                           "Naka-off ang access sa calendar. Payagan ang ScreenRest sa System Settings → Privacy & Security → Calendars.")
+                    }
+                })
+    }
+
+    private func set<T>(_ kp: ReferenceWritableKeyPath<Settings, T>, _ v: T) {
+        objectWillChange.send()
+        s[keyPath: kp] = v
+        applied()
+    }
+
+    var shiftValid: Bool { s.shiftEndMin > s.shiftStartMin }
+    var lunchValid: Bool { !s.lunchEnabled || s.lunchEndMin > s.lunchStartMin }
+
+    /// Everything except the language goes back to the defaults.
+    func restoreDefaults() {
+        let d = Settings(), lang = s.language
+        objectWillChange.send()
+        s.shiftStartMin = d.shiftStartMin; s.shiftEndMin = d.shiftEndMin; s.workDays = d.workDays
+        s.lunchEnabled = d.lunchEnabled; s.lunchStartMin = d.lunchStartMin; s.lunchEndMin = d.lunchEndMin
+        s.microIntervalMin = d.microIntervalMin; s.microDurationSec = d.microDurationSec
+        s.longIntervalMin = d.longIntervalMin; s.longDurationMin = d.longDurationMin
+        s.warningSec = d.warningSec; s.strictMode = d.strictMode; s.maxPostpones = d.maxPostpones
+        s.postponeMin = d.postponeMin; s.sounds = d.sounds; s.idleResetMin = d.idleResetMin
+        s.blinkNudges = d.blinkNudges; s.blinkEveryMin = d.blinkEveryMin; s.voiceGuide = d.voiceGuide
+        s.deferDuringMeetings = d.deferDuringMeetings; s.handsOffCheck = d.handsOffCheck; s.dailyCheckIn = d.dailyCheckIn
+        s.useCalendar = d.useCalendar; s.menuBarCountdown = d.menuBarCountdown
+        s.language = lang
+        applied()
+    }
+
+    private func applied() {
+        changed?()
+        // Save shortly after the last change, and only a schedule that makes sense.
+        saveWork?.cancel()
+        let w = DispatchWorkItem { [weak self] in
+            guard let self = self, self.shiftValid, self.lunchValid else { return }
+            try? self.s.save()
         }
-        if chkLunch.state == .on && minutes(dtLunchE) <= minutes(dtLunchS) {
-            warn(L.t("Lunch has to end after it starts.", "Dapat matapos ang tanghalian pagkatapos nitong magsimula."))
-            return
+        saveWork = w
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: w)
+    }
+
+    /// How a full workday plays out with the current settings (same timer rules as the app).
+    var plannedBreaks: (eye: Int, stretch: Int, activeMin: Int) {
+        var segments: [Int] = []
+        if s.lunchEnabled && s.lunchStartMin > s.shiftStartMin && s.lunchEndMin < s.shiftEndMin && s.lunchEndMin > s.lunchStartMin {
+            segments = [s.lunchStartMin - s.shiftStartMin, s.shiftEndMin - s.lunchEndMin]
+        } else {
+            segments = [max(0, s.shiftEndMin - s.shiftStartMin)]
         }
-        s.language = cmbLang.indexOfSelectedItem == 1 ? "tl" : "en"
-        s.shiftStartMin = minutes(dtStart); s.shiftEndMin = minutes(dtEnd)
-        for i in 0..<7 { s.workDays[i] = days[i].state == .on }
-        s.lunchEnabled = chkLunch.state == .on; s.lunchStartMin = minutes(dtLunchS); s.lunchEndMin = minutes(dtLunchE)
-        s.microIntervalMin = nMicroI.value; s.microDurationSec = nMicroD.value
-        s.longIntervalMin = nLongI.value; s.longDurationMin = nLongD.value
-        s.warningSec = nWarn.value; s.postponeMin = nPostMin.value; s.maxPostpones = nPostMax.value
-        s.idleResetMin = nIdle.value; s.strictMode = chkStrict.state == .on; s.sounds = chkSounds.state == .on
-        s.blinkNudges = chkBlink.state == .on; s.blinkEveryMin = nBlink.value
-        s.voiceGuide = chkVoice.state == .on; s.deferDuringMeetings = chkDefer.state == .on
-        s.handsOffCheck = chkHandsOff.state == .on; s.dailyCheckIn = chkCheckIn.state == .on
-        do {
-            try s.save()
-        } catch {
-            warn(L.t("Couldn't save settings: ", "Hindi na-save ang settings: ") + error.localizedDescription)
-            return
-        }
-        let wantStartup = chkStartup.state == .on
-        if Settings.canManageStartup && wantStartup != Settings.startupEnabled {
-            do { try Settings.setStartup(wantStartup) } catch {
-                Notifier.shared.post("ScreenRest", L.t("Couldn't change the login item: ", "Hindi nabago ang login item: ") +
-                                     error.localizedDescription)
+        let eyeSec = s.microIntervalMin * 60, strSec = s.longIntervalMin * 60
+        var eye = 0, stretch = 0
+        for seg in segments {
+            var sinceEye = 0, sinceStr = 0
+            for _ in 0..<(seg * 60) {
+                sinceEye += 1; sinceStr += 1
+                if strSec - sinceStr <= 0 { stretch += 1; sinceStr = 0; sinceEye = 0 }
+                else if eyeSec - sinceEye <= 0 {
+                    if strSec - sinceStr > 120 { eye += 1 } // an eye break right before a stretch is skipped
+                    sinceEye = 0
+                }
             }
         }
-        saved?()
-        close()
+        return (eye, stretch, segments.reduce(0, +))
     }
 }
 
-/// Two-column label / control grid with section headings.
-final class Form {
-    let grid = NSGridView()
-    init() {
-        grid.columnSpacing = 14
-        grid.rowSpacing = 7
-        grid.rowAlignment = .firstBaseline
+// MARK: - Window
+
+final class SettingsWindowController: NSWindowController, NSWindowDelegate {
+    var closed: (() -> Void)?
+    let model: SettingsModel
+    private let tabs = PaneTabs()
+    private var languageShown: String
+
+    init(_ settings: Settings) {
+        model = SettingsModel(settings)
+        languageShown = settings.language
+        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 400),
+                         styleMask: [.titled, .closable], backing: .buffered, defer: false) // no minimize/zoom (HIG)
+        w.isReleasedWhenClosed = false
+        w.toolbarStyle = .preference
+        super.init(window: w)
+        w.delegate = self
+
+        tabs.tabStyle = .toolbar
+        tabs.transitionOptions = [.crossfade, .allowUserInteraction]
+        let panes: [(AnyView, String)] = [
+            (AnyView(GeneralPane(m: model)), "gearshape"),
+            (AnyView(SchedulePane(m: model)), "calendar"),
+            (AnyView(BreaksPane(m: model)), "timer"),
+            (AnyView(SmartPane(m: model)), "sparkles"),
+        ]
+        for (view, symbol) in panes {
+            let host = NSHostingController(rootView: view)
+            host.sizingOptions = [.preferredContentSize]
+            let item = NSTabViewItem(viewController: host)
+            item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+            tabs.addTabViewItem(item)
+        }
+        w.contentViewController = tabs
+        updateLabels()
+        tabs.fitWindow(animate: false)
     }
-    func section(_ title: String) {
-        let l = label(title, size: 13, weight: .semibold, color: Brand.teal)
-        let r = grid.addRow(with: [l, NSGridCell.emptyContentView])
-        r.mergeCells(in: NSRange(location: 0, length: 2))
-        if grid.numberOfRows > 1 { r.topPadding = 12 }
+    required init?(coder: NSCoder) { fatalError() }
+
+    /// Tab names follow the interface language (the panes re-render themselves).
+    func updateLabels() {
+        let names = [L.t("General", "Pangkalahatan"), L.t("Schedule", "Iskedyul"), L.t("Breaks", "Breaks"), L.t("Smart", "Matalino")]
+        for (i, item) in tabs.tabViewItems.enumerated() { item.label = names[i] }
+        window?.title = names[max(0, tabs.selectedTabViewItemIndex)]
     }
-    func row(_ text: String, _ control: NSView) {
-        grid.addRow(with: [label(text), control])
+
+    /// Called by the app after each change.
+    func settingsChanged() {
+        if model.s.language != languageShown { languageShown = model.s.language; updateLabels() }
     }
-    func full(_ control: NSView) {
-        let r = grid.addRow(with: [control, NSGridCell.emptyContentView])
-        r.mergeCells(in: NSRange(location: 0, length: 2))
+
+    func present() {
+        activateApp()
+        if window?.isVisible != true { window?.center() }
+        window?.makeKeyAndOrderFront(nil)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        let c = closed
+        closed = nil
+        c?()
+    }
+}
+
+/// Resizes the window to each pane's height, keeping the top edge in place (like System Settings).
+final class PaneTabs: NSTabViewController {
+    override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
+        super.tabView(tabView, didSelect: tabViewItem)
+        fitWindow(animate: view.window?.isVisible == true)
+    }
+
+    /// A pane grew or shrank (for example a warning appeared under a section).
+    override func preferredContentSizeDidChange(for viewController: NSViewController) {
+        super.preferredContentSizeDidChange(for: viewController)
+        if viewController === tabViewItems[safe: selectedTabViewItemIndex]?.viewController {
+            fitWindow(animate: view.window?.isVisible == true)
+        }
+    }
+
+    func fitWindow(animate: Bool) {
+        guard let w = view.window, let vc = tabViewItems[safe: selectedTabViewItemIndex]?.viewController else { return }
+        var size = vc.preferredContentSize
+        if size.width <= 0 || size.height <= 0, let host = vc as? NSHostingController<AnyView> {
+            size = host.sizeThatFits(in: NSSize(width: 520, height: 10_000))
+        }
+        guard size.width > 0, size.height > 0 else { return }
+        var f = w.frameRect(forContentRect: NSRect(origin: .zero, size: size))
+        f.origin = NSPoint(x: w.frame.minX, y: w.frame.maxY - f.height)
+        w.setFrame(f, display: true, animate: animate)
+    }
+}
+
+private extension Array {
+    subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }
+}
+
+// MARK: - Shared rows
+
+/// "Every  20 min  [-|+]" row.
+struct NumberRow: View {
+    let title: String
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    var step = 1
+    let unit: String
+
+    var body: some View {
+        LabeledContent(title) {
+            HStack(spacing: 8) {
+                Text("\(value) \(unit)").monospacedDigit().foregroundStyle(.secondary)
+                Stepper(title, value: $value, in: range, step: step).labelsHidden()
+            }
+        }
+    }
+}
+
+private struct Footnote: View {
+    let text: String
+    var warning = false
+    var body: some View {
+        Label {
+            Text(text)
+        } icon: {
+            Image(systemName: warning ? "exclamationmark.triangle.fill" : "info.circle")
+                .foregroundStyle(warning ? Color.orange : Color.secondary)
+        }
+        .font(.callout)
+        .foregroundStyle(warning ? Color.primary : Color.secondary)
+    }
+}
+
+private extension View {
+    /// Fixed-width grouped form, as tall as its content, so each pane sizes the window.
+    func paneStyle() -> some View {
+        formStyle(.grouped)
+            .scrollDisabled(true)
+            .frame(width: 520)
+            .fixedSize(horizontal: false, vertical: true)
+            .tint(Color(nsColor: Brand.teal))
+    }
+}
+
+/// Work-day button: filled with the brand colour when on, so the choice reads clearly in any window state.
+private struct DayChip: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button { configuration.isOn.toggle() } label: {
+            configuration.label
+                .font(.callout.weight(configuration.isOn ? .semibold : .regular))
+                .frame(minWidth: 36)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 4)
+                .foregroundStyle(configuration.isOn ? Color.white : Color.primary)
+                .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(configuration.isOn ? Color(nsColor: Brand.teal) : Color.secondary.opacity(0.15)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(configuration.isOn ? .isSelected : [])
+    }
+}
+
+private func hoursText(_ minutes: Int) -> String {
+    minutes % 60 == 0 ? "\(minutes / 60) h" : "\(minutes / 60) h \(minutes % 60) min"
+}
+
+// MARK: - Panes
+
+struct GeneralPane: View {
+    @ObservedObject var m: SettingsModel
+
+    var body: some View {
+        Form {
+            Section {
+                Picker(L.t("Language", "Wika"), selection: m.b(\.language)) {
+                    Text("English").tag("en")
+                    Text("Tagalog").tag("tl")
+                }
+            } header: {
+                Text(L.t("Language", "Wika"))
+            } footer: {
+                if L.tl { Footnote(text: "Ang gabay na boses ay nasa English pa.") }
+            }
+
+            Section(L.t("Sound and voice", "Tunog at boses")) {
+                Toggle(L.t("Voice guidance during breaks", "Gabay na boses habang naka-break"), isOn: m.b(\.voiceGuide))
+                Toggle(L.t("Play sounds", "Magpatunog"), isOn: m.b(\.sounds))
+            }
+
+            Section(L.t("Menu bar", "Menu bar")) {
+                Toggle(L.t("Show time to the next break", "Ipakita ang oras bago ang susunod na break"), isOn: m.b(\.menuBarCountdown))
+            }
+
+            Section {
+                if Settings.canManageStartup {
+                    Toggle(L.t("Open ScreenRest when I log in", "Buksan ang ScreenRest pag-log in ko"), isOn: m.startup)
+                } else {
+                    LabeledContent(L.t("Open at login", "Buksan pag-log in"),
+                                   value: L.t("Move ScreenRest to Applications first", "Ilipat muna ang ScreenRest sa Applications"))
+                }
+            } header: {
+                Text(L.t("Startup", "Pagbukas"))
+            } footer: {
+                if let e = m.startupError { Footnote(text: e, warning: true) }
+                else { Footnote(text: L.t("ScreenRest then covers every shift without you opening it.",
+                                          "Sa ganoon, sakop ng ScreenRest ang bawat shift nang hindi mo binubuksan.")) }
+            }
+
+            Section {
+                LabeledContent(L.t("Settings and history files", "Files ng settings at history")) {
+                    Button(L.t("Show in Finder", "Ipakita sa Finder")) { openDataFolder() }
+                }
+                LabeledContent(L.t("Reset settings", "I-reset ang settings")) {
+                    Button(L.t("Restore Defaults", "Ibalik sa Default")) { m.restoreDefaults() }
+                }
+            } footer: {
+                Footnote(text: L.t("Restore Defaults keeps your language. Your history is never changed.",
+                                   "Hindi binabago ng Ibalik sa Default ang wika at ang iyong history."))
+            }
+        }
+        .paneStyle()
+    }
+}
+
+struct SchedulePane: View {
+    @ObservedObject var m: SettingsModel
+
+    var body: some View {
+        let p = m.plannedBreaks
+        let days = m.s.workDays.filter { $0 }.count
+        Form {
+            Section {
+                DatePicker(L.t("Starts", "Simula"), selection: m.time(\.shiftStartMin), displayedComponents: .hourAndMinute)
+                DatePicker(L.t("Ends", "Tapos"), selection: m.time(\.shiftEndMin), displayedComponents: .hourAndMinute)
+                LabeledContent(L.t("Work days", "Araw ng trabaho")) {
+                    HStack(spacing: 4) {
+                        ForEach([1, 2, 3, 4, 5, 6, 0], id: \.self) { i in
+                            Toggle(L.day(i), isOn: m.day(i)).toggleStyle(DayChip())
+                        }
+                    }
+                }
+            } header: {
+                Text(L.t("Work shift", "Shift sa trabaho"))
+            } footer: {
+                if !m.shiftValid {
+                    Footnote(text: L.t("The shift has to end after it starts. Changes are saved once it does.",
+                                       "Dapat matapos ang shift pagkatapos nitong magsimula. Mase-save ito kapag naayos na."), warning: true)
+                } else {
+                    Footnote(text: String(format: L.t("Reminders run %@ a day, %d days a week. Outside these hours ScreenRest stays quiet.",
+                                                      "Tumatakbo ang paalala nang %@ bawat araw, %d araw bawat linggo. Tahimik ang ScreenRest sa labas ng oras na ito."),
+                                          hoursText(p.activeMin), days))
+                }
+            }
+
+            Section {
+                Toggle(L.t("Pause reminders during lunch", "I-pause ang paalala tuwing tanghalian"), isOn: m.b(\.lunchEnabled))
+                DatePicker(L.t("From", "Mula"), selection: m.time(\.lunchStartMin), displayedComponents: .hourAndMinute)
+                    .disabled(!m.s.lunchEnabled)
+                DatePicker(L.t("To", "Hanggang"), selection: m.time(\.lunchEndMin), displayedComponents: .hourAndMinute)
+                    .disabled(!m.s.lunchEnabled)
+            } header: {
+                Text(L.t("Lunch", "Tanghalian"))
+            } footer: {
+                if !m.lunchValid {
+                    Footnote(text: L.t("Lunch has to end after it starts.", "Dapat matapos ang tanghalian pagkatapos nitong magsimula."), warning: true)
+                }
+            }
+        }
+        .environment(\.locale, Locale(identifier: "en_GB")) // 24-hour clock
+        .paneStyle()
+    }
+}
+
+struct BreaksPane: View {
+    @ObservedObject var m: SettingsModel
+
+    var body: some View {
+        let p = m.plannedBreaks
+        Form {
+            Section {
+                NumberRow(title: L.t("Every", "Tuwing"), value: m.b(\.microIntervalMin), range: 5...120, step: 5, unit: "min")
+                NumberRow(title: L.t("Lasts", "Tagal"), value: m.b(\.microDurationSec), range: 10...120, step: 5, unit: "s")
+            } header: {
+                Text(L.t("Eye break · 20-20-20 rule", "Eye break · 20-20-20 rule"))
+            }
+
+            Section {
+                NumberRow(title: L.t("Every", "Tuwing"), value: m.b(\.longIntervalMin), range: 15...180, step: 5, unit: "min")
+                NumberRow(title: L.t("Lasts", "Tagal"), value: m.b(\.longDurationMin), range: 1...20, unit: "min")
+            } header: {
+                Text(L.t("Stand-up and stretch break", "Tayo at stretch break"))
+            } footer: {
+                if m.shiftValid {
+                    Footnote(text: String(format: L.t("A full shift gives you about %d eye breaks and %d stretch breaks, %d minutes on your feet.",
+                                                      "Sa isang buong shift, mga %d eye break at %d stretch break, %d minutong nakatayo."),
+                                          p.eye, p.stretch, p.stretch * m.s.longDurationMin))
+                }
+            }
+
+            Section {
+                NumberRow(title: L.t("Heads-up before a stretch break", "Paalala bago ang stretch break"), value: m.b(\.warningSec), range: 0...120, step: 5, unit: "s")
+                NumberRow(title: L.t("Postpone by", "Ipagpaliban nang"), value: m.b(\.postponeMin), range: 1...30, unit: "min")
+                NumberRow(title: L.t("Postpones in a row", "Sunod-sunod na pagpapaliban"), value: m.b(\.maxPostpones), range: 0...10, unit: "×")
+                Toggle(L.t("Strict mode", "Strict mode"), isOn: m.b(\.strictMode))
+            } header: {
+                Text(L.t("When a break is due", "Kapag oras na ng break"))
+            } footer: {
+                Footnote(text: m.s.strictMode
+                         ? L.t("Breaks can't be skipped or postponed, and Cmd-Tab is blocked until they finish.",
+                               "Hindi puwedeng laktawan o ipagpaliban ang break, at naka-block ang Cmd-Tab hanggang matapos.")
+                         : L.t("You can still finish early with Done, skip with Esc, or postpone.",
+                               "Puwede pa ring tapusin nang maaga gamit ang Tapos na, laktawan gamit ang Esc, o ipagpaliban."))
+            }
+        }
+        .paneStyle()
+    }
+}
+
+struct SmartPane: View {
+    @ObservedObject var m: SettingsModel
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle(L.t("Hold breaks during calls and full-screen apps", "I-hold ang break habang may tawag o full-screen app"),
+                       isOn: m.b(\.deferDuringMeetings))
+                Toggle(L.t("Pause the countdown while I keep typing", "I-pause ang countdown habang nagta-type pa ako"),
+                       isOn: m.b(\.handsOffCheck))
+                NumberRow(title: L.t("Time away that counts as a break", "Tagal ng pag-alis na bilang break"),
+                          value: m.b(\.idleResetMin), range: 1...60, unit: "min")
+            } header: {
+                Text(L.t("Fit around my work", "Iayon sa trabaho ko"))
+            } footer: {
+                Footnote(text: L.t("Calls are noticed when the camera or microphone is in use. ScreenRest never turns them on or listens.",
+                                   "Napapansin ang tawag kapag ginagamit ang camera o mikropono. Hindi kailanman binubuksan o pinakikinggan ng ScreenRest ang mga ito."))
+            }
+
+            Section {
+                Toggle(L.t("Use my calendar", "Gamitin ang calendar ko"), isOn: m.calendar)
+            } header: {
+                Text(L.t("Calendar", "Calendar"))
+            } footer: {
+                if let n = m.calendarNote { Footnote(text: n, warning: true) }
+                else {
+                    Footnote(text: L.t("Breaks wait during meetings, and a stretch break due during a meeting moves to just before it. Only event times are read; nothing leaves your Mac.",
+                                       "Naghihintay ang break habang may meeting, at inililipat bago ang meeting ang stretch break na tatama rito. Oras lang ng event ang binabasa; walang lumalabas sa Mac mo."))
+                }
+            }
+
+            Section {
+                Toggle(L.t("Gentle blink reminders between breaks", "Mahinahong paalalang kumurap sa pagitan ng breaks"), isOn: m.b(\.blinkNudges))
+                NumberRow(title: L.t("Remind me every", "Paalalahanan ako tuwing"), value: m.b(\.blinkEveryMin), range: 5...60, step: 5, unit: "min")
+                    .disabled(!m.s.blinkNudges)
+                Toggle(L.t("End-of-shift check-in", "Check-in sa dulo ng shift"), isOn: m.b(\.dailyCheckIn))
+            } header: {
+                Text(L.t("Reminders and check-in", "Paalala at check-in"))
+            } footer: {
+                Footnote(text: L.t("The check-in asks two quick questions about eye blur and energy. The Dashboard uses them to show whether breaks help.",
+                                   "Dalawang mabilis na tanong ang check-in tungkol sa labo ng mata at lakas. Ginagamit ito ng Dashboard para ipakita kung nakakatulong ang breaks."))
+            }
+        }
+        .paneStyle()
     }
 }

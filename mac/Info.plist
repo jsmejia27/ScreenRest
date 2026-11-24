@@ -30,6 +30,10 @@
     <string>public.app-category.healthcare-fitness</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>ScreenRest can hold breaks during your meetings and move a stretch break so it doesn't interrupt one. It only reads event times; nothing leaves your Mac.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>ScreenRest can hold breaks during your meetings and move a stretch break so it doesn't interrupt one. It only reads event times; nothing leaves your Mac.</string>
     <key>NSHumanReadableCopyright</key>
     <string>© 2026 Jilbert Mejia. MIT License.</string>
 </dict>

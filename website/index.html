@@ -176,6 +176,17 @@ section{padding:96px 0}
 .shot strong{color:var(--ink)}
 @media (max-width:900px){.gallery{grid-template-columns:1fr}}
 
+/* on a mac */
+.mac .feature-shot{border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line);background:var(--bg)}
+.mac .feature-shot img{display:block;width:100%;height:auto}
+.mac-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:28px;align-items:start}
+.mac-side{display:grid;gap:22px}
+.mac figcaption{margin-top:12px;font-size:15px;color:var(--ink-2)}
+.mac figcaption strong{color:var(--ink)}
+.mac figure{margin:0}
+.mac picture img{display:block;width:100%;height:auto}
+@media (max-width:900px){.mac-grid{grid-template-columns:1fr}}
+
 /* privacy */
 .privacy{position:relative;color:#fff;background:var(--night);overflow:hidden}
 .privacy::before{content:"";position:absolute;inset:0;background:url(assets/waves.webp) center/cover;opacity:.75}
@@ -437,6 +448,37 @@ footer nav a{text-decoration:none;color:var(--night-ink)}
       <figure class="shot reveal" style="margin:0"><img src="assets/shots/setup.webp" alt="ScreenRest setup window" loading="lazy"><p><strong>1. Install.</strong> On Windows, one small setup file installed just for you, no administrator rights needed. On a Mac, drag ScreenRest into Applications.</p></figure>
       <figure class="shot reveal" style="margin:0"><img src="assets/shots/welcome.webp" alt="ScreenRest welcome window showing the daily plan" loading="lazy"><p><strong>2. Say hello.</strong> A quick welcome shows your plan for the day. Try a 20-second break straight away if you like.</p></figure>
       <figure class="shot reveal" style="margin:0"><img src="assets/shots/settings.webp" alt="ScreenRest settings window" loading="lazy"><p><strong>3. Tune it.</strong> Open the eye icon (by the clock on Windows, in the menu bar on a Mac) to set your shift, lunch and how often you want breaks.</p></figure>
+    </div>
+  </div>
+</section>
+
+<section class="mac" id="mac">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">On a Mac</span>
+      <h2>A native Mac app, with a dashboard that shows what's working</h2>
+      <p class="lead">The Mac version lives in the menu bar and follows light and dark mode. It adds a Dashboard with insights from your own history, a one-page PDF to take to your eye doctor, and optional calendar awareness, so breaks wait for meetings or move to just before them.</p>
+    </div>
+    <div class="mac-grid">
+      <figure class="reveal">
+        <div class="feature-shot">
+          <picture>
+            <source srcset="assets/shots/mac/dashboard-dark.webp" media="(prefers-color-scheme: dark)">
+            <img src="assets/shots/mac/dashboard-light.webp" alt="ScreenRest Dashboard on a Mac: break score, screen time, breaks per day, check-in ratings, time of day and insights" loading="lazy">
+          </picture>
+        </div>
+        <figcaption><strong>Dashboard.</strong> Today, 7 or 30 days at a glance, compared with the period before, plus short insights such as which time of day you skip breaks most.</figcaption>
+      </figure>
+      <div class="mac-side">
+        <figure class="reveal">
+          <div class="feature-shot"><img src="assets/shots/mac/report.webp" alt="One-page PDF report of the last 30 days for an optometrist" loading="lazy"></div>
+          <figcaption><strong>PDF for your eye doctor.</strong> Thirty days of breaks, screen time and eye-blur ratings on one page, with a note on how to read them.</figcaption>
+        </figure>
+        <figure class="reveal">
+          <div class="feature-shot"><img src="assets/shots/mac/settings-breaks.webp" alt="ScreenRest Settings on a Mac, Breaks pane" loading="lazy"></div>
+          <figcaption><strong>Settings, the Mac way.</strong> Changes apply as you make them, with live summaries like how many breaks a full shift gives you.</figcaption>
+        </figure>
+      </div>
     </div>
   </div>
 </section>

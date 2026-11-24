@@ -63,6 +63,12 @@ final class BarView: NSView {
 /// Full-screen dimmed overlay that guides the user through a break (port of BreakForm.cs).
 final class BreakController: NSObject {
     var onFinish: ((BreakResult) -> Void)?
+    /// For --selftest: is a voice-over playing right now, and has the break ended?
+    var isVoicePlaying: Bool { voice?.isPlaying ?? false }
+    var isFinished: Bool { finished }
+    /// Seconds of the break actually done (countdown time, not counting pauses), and the planned length.
+    var elapsedSeconds: Int { elapsed }
+    var plannedSeconds: Int { totalSec }
     private(set) var pausedSeconds = 0 // time the countdown was held because you kept working
 
     private let kind: BreakKind

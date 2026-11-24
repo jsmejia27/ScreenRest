@@ -29,6 +29,14 @@ No internet, no account, no ads. English and Tagalog. Both versions have the sam
 | **Settings** | **Health trend** |
 | <img src="website/assets/shots/settings.webp" alt="Settings window"> | <img src="website/assets/shots/trend.webp" alt="30-day health trend chart"> |
 
+**macOS**
+
+| Dashboard | Stretch break |
+|---|---|
+| <img src="website/assets/shots/mac/dashboard-light.webp" alt="Mac Dashboard with insights"> | <img src="website/assets/shots/mac/break-stretch.webp" alt="Mac stretch break screen"> |
+| **PDF for your eye doctor** | **Settings** |
+| <img src="website/assets/shots/mac/report.webp" alt="One-page PDF report"> | <img src="website/assets/shots/mac/settings-breaks.webp" alt="Mac Settings, Breaks pane"> |
+
 <details>
 <summary>Promo carousel (Tagalog, 1080×1350)</summary>
 
