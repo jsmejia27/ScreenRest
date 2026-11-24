@@ -4,7 +4,7 @@
 #   powershell -ExecutionPolicy Bypass -File .\installer\build_setup.ps1
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$ver  = '1.1.1'
+$ver  = '1.2.0'
 $csc  = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $fw   = Split-Path $csc
 $dist = Join-Path $root 'dist'

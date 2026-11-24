@@ -12,8 +12,8 @@ using Microsoft.Win32;
 [assembly: AssemblyDescription("Installs ScreenRest for the current user")]
 [assembly: AssemblyCompany("Jilbert Mejia")]
 [assembly: AssemblyCopyright("© 2026 Jilbert Mejia. MIT License.")]
-[assembly: AssemblyVersion("1.1.1.0")]
-[assembly: AssemblyFileVersion("1.1.1.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]
 
 namespace ScreenRest.Setup
 {
@@ -23,7 +23,7 @@ namespace ScreenRest.Setup
     /// </summary>
     public class SetupForm : Form
     {
-        public const string Version = "1.1.1";
+        public const string Version = "1.2.0";
         const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\ScreenRest";
 
         static readonly Color Bg = Color.FromArgb(14, 22, 28);
