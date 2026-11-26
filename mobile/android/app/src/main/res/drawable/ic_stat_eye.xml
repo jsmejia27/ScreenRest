@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Notification icon: the closed "resting" eye from the app icon.
+     Must be a single colour (white) on transparent. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group android:translateX="-3" android:translateY="-5.1"
+        android:scaleX="0.3" android:scaleY="0.3">
+        <path
+            android:pathData="M22,44Q50,72 78,44 M36,56.5L31.5,66 M50,60V70.5 M64,56.5L68.5,66"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="7.5"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000" />
+    </group>
+</vector>

@@ -1,0 +1,104 @@
+{
+ "palming": {
+  "match": 1.0,
+  "seed": 42,
+  "said": "Palming. Rub your hands briskly until they feel warm, then cup them over your closed eyes. Don't press. Breathe slowly and enjoy the darkness.",
+  "heard": "palming. Rub your hands briskly until they feel warm, then cup them over your closed eyes. Don't press, breathe slowly and enjoy the darkness."
+ },
+ "look_far_away": {
+  "match": 1.0,
+  "seed": 42,
+  "said": "Look far away. Find something at least six metres, or twenty feet, away, like a window, a door or the far wall. Let your eyes go soft and relax. This is the twenty twenty twenty rule.",
+  "heard": "Look far away. Find something at least 6 meters or 20 feet away like a window, a door or the far wall. Let your eyes go soft and relax. This is the 20-20-20 rule."
+ },
+ "slow_blinks": {
+  "match": 1.0,
+  "seed": 42,
+  "said": "Slow blinks. Close your eyes fully, then open them. Do it slowly, ten times. Staring at a screen makes you blink about half as often, so your eyes dry out and blur.",
+  "heard": "Slow blinks. Close your eyes fully, then open them. Do it slowly, ten times. Staring at a screen makes you blink about half as often, so your eyes dry out and blur."
+ },
+ "near_and_far_focus": {
+  "match": 1.0,
+  "seed": 7,
+  "said": "Near and far focus. Hold your thumb about twenty-five centimetres from your face and focus on it. Then focus on something far away. Switch every three seconds.",
+  "heard": "Near and far focus. Hold your thumb about 25 centimeters from your face and focus on it. Then focus on something far away. Switch every three seconds."
+ },
+ "eye_circles": {
+  "match": 1.0,
+  "seed": 7,
+  "said": "Eye circles. Without moving your head, slowly look up, then right, down, and left. Circle slowly three times, then switch direction.",
+  "heard": "Eye circles. Without moving your head, slowly look up, then right, down, and left. Circle slowly three times, then switch direction."
+ },
+ "look_out_and_breathe": {
+  "match": 1.0,
+  "seed": 42,
+  "said": "Look out and breathe. Look as far away as you can. At the same time, roll your shoulders back five times and take three deep breaths.",
+  "heard": "Look out and breathe. Look as far away as you can. At the same time, roll your shoulders back five times and take three deep breaths."
+ },
+ "look_up": {
+  "match": 1.0,
+  "seed": 42,
+  "said": "Look up from your phone. Sit up tall, drop your shoulders and take one slow, deep breath.",
+  "heard": "Look up from your phone. Sit up tall. Drop your shoulders and take one slow, deep breath."
+ },
+ "thumb_stretch": {
+  "match": 1.0,
+  "seed": 42,
+  "said": "Thumb stretch. Gently pull each thumb back with your free hand and hold for ten seconds. Then touch your thumb to each fingertip, five times.",
+  "heard": "Thumb stretch. Gently pull each thumb back with your free hand and hold for 10 seconds. Then touch your thumb to each fingertip five times."
+ },
+ "finger_spread": {
+  "match": 1.0,
+  "seed": 42,
+  "said": "Finger spread. Spread your fingers as wide as you can and hold for five seconds. Then make a soft fist. Repeat ten times.",
+  "heard": "Finger spread. Spread your fingers as wide as you can and hold for five seconds. Then make a soft fist. Repeat 10 times."
+ },
+ "wrist_circles": {
+  "match": 1.0,
+  "seed": 42,
+  "said": "Wrist circles. Make slow circles with both wrists, ten times each way. Then shake out your hands.",
+  "heard": "wrist circles. Make slow circles with both wrists 10 times each way, then shake out your hands."
+ },
+ "prayer_stretch": {
+  "match": 1.0,
+  "seed": 42,
+  "said": "Prayer stretch. Press your palms together in front of your chest. Slowly lower your hands until you feel a stretch in your wrists. Hold for fifteen seconds.",
+  "heard": "Prayer stretch. Press your palms together in front of your chest. Slowly lower your hands until you feel a stretch in your wrists. Hold for 15 seconds."
+ },
+ "wrist_and_forearm_stretch": {
+  "match": 1.0,
+  "seed": 42,
+  "said": "Wrist and forearm stretch. Hold one arm straight out, palm up. With your free hand, gently pull your fingers down for fifteen seconds. Flip your palm down and repeat. Then do the other arm.",
+  "heard": "wrist and forearm stretch. Hold one arm straight out, palm up. With your free hand, gently pull your fingers down for 15 seconds. Flip your palm down and repeat. Then do the other arm."
+ },
+ "chin_tucks": {
+  "match": 1.0,
+  "seed": 42,
+  "said": "Chin tucks. Look straight ahead and gently pull your chin back, like making a double chin. Hold for three seconds, ten times. This undoes phone neck.",
+  "heard": "Chin Tucks. Look straight ahead and gently pull your chin back, like making a double chin. Hold for three seconds, ten times. This undoes phone neck."
+ },
+ "neck_side_stretch": {
+  "match": 1.0,
+  "seed": 2024,
+  "said": "Neck side stretch. Gently tilt your right ear toward your right shoulder and hold for ten seconds. Switch sides. Then slowly look over each shoulder. Never force it.",
+  "heard": "Neck, side, stretch. Gently tilt your right ear toward your right shoulder and hold for 10 seconds. Switch sides. Then slowly look over each shoulder. Never force it."
+ },
+ "shoulder_rolls": {
+  "match": 1.0,
+  "seed": 42,
+  "said": "Shoulder rolls. Roll your shoulders up, back and down ten times. Then squeeze your shoulder blades together and hold for five seconds, three times.",
+  "heard": "Shoulder rolls, roll your shoulders up, back and down 10 times. Then squeeze your shoulder blades together and hold for 5 seconds, 3 times."
+ },
+ "chest_opener": {
+  "match": 1.0,
+  "seed": 42,
+  "said": "Chest opener. Clasp your hands behind your back, straighten your arms, and lift them a little. Open your chest and look slightly up. Breathe deeply. This undoes the hunch.",
+  "heard": "Chest Opener. Clasp your hands behind your back, straighten your arms, and lift them a little. Open your chest and look slightly up. Breathe deeply. This undoes the hunch."
+ },
+ "overhead_reach": {
+  "match": 1.0,
+  "seed": 42,
+  "said": "Overhead reach. Interlace your fingers and push your palms up toward the ceiling. Reach tall, then lean gently left and right. Breathe out as you stretch.",
+  "heard": "Overhead reach, interlace your fingers and push your palms up toward the ceiling. Reach tall, then lean gently left and right. Breathe out as you stretch."
+ }
+}
