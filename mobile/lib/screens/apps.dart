@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../lang.dart';
 import '../native.dart';
 import '../theme.dart';
+import '../widgets.dart';
 
 /// Lets the person relabel apps used in the last 7 days as reading, watching, gaming or other.
 class AppsScreen extends StatefulWidget {
@@ -102,6 +103,7 @@ class _AppsScreenState extends State<AppsScreen> {
                         final a = _apps[i - 1];
                         final kind = a['kind'] as String? ?? 'other';
                         return ListTile(
+                          leading: AppIcon(pkg: a['pkg'] as String, kind: kind, size: 36),
                           title: Text(a['label'] as String? ?? a['pkg'] as String),
                           subtitle: Text(L.t('${a['minutes']} min this week', '${a['minutes']} min ngayong linggo'),
                               style: const TextStyle(color: C.dim)),

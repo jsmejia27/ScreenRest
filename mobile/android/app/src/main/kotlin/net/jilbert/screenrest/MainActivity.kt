@@ -112,6 +112,25 @@ class MainActivity : FlutterActivity() {
                         prefs.setKindOverride(a["pkg"] as String, Kind.of(a["kind"] as? String))
                         result.success(null)
                     }
+                    "appIcon" -> {
+                        val pkg = call.arguments as String
+                        Thread {
+                            val png = AppIcons.png(this, pkg)
+                            runOnUiThread { result.success(png) }
+                        }.start()
+                    }
+                    "exportPdf" -> {
+                        val report = ReportPdf(this, call.arguments as Map<*, *>)
+                        Thread {
+                            val file = runCatching { report.write() }
+                            runOnUiThread {
+                                file.fold(
+                                    { report.share(it); result.success(true) },
+                                    { result.error("pdf", it.message, null) },
+                                )
+                            }
+                        }.start()
+                    }
                     "playVoice" -> result.success(playVoice(call.arguments as String))
                     "stopVoice" -> { stopVoice(); result.success(null) }
                     else -> result.notImplemented()

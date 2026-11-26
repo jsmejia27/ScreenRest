@@ -58,6 +58,12 @@ class Native {
     return (l ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
+  /// The launcher icon of [pkg] as PNG bytes, or null if it can't be read.
+  static Future<Uint8List?> appIcon(String pkg) => _call<Uint8List>('appIcon', pkg);
+
+  /// Lays out [report] as a PDF and opens the share sheet. False if that failed.
+  static Future<bool> exportPdf(Map<String, Object?> report) async => await _call<bool>('exportPdf', report) ?? false;
+
   static Future<void> setAppKind(String pkg, String? kind) => _call('setAppKind', {'pkg': pkg, 'kind': kind});
   static Future<void> breakDone(String type, {required bool taken}) => _call('breakDone', {'type': type, 'taken': taken});
   static Future<void> pause(int minutes) => _call('pause', minutes);

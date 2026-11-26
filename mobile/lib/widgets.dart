@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import 'lang.dart';
+import 'native.dart';
 import 'theme.dart';
 
 /// Rounded panel with an optional small heading.
@@ -94,6 +97,40 @@ class PermTile extends StatelessWidget {
         ),
         if (!ok) TextButton(onPressed: onTap, child: Text(L.t('Turn on', 'I-on'))),
       ]),
+    );
+  }
+}
+
+/// Another app's launcher icon, loaded once from Android and cached.
+/// Falls back to a dot in the app's type colour when the icon can't be read.
+class AppIcon extends StatelessWidget {
+  final String pkg;
+  final String kind;
+  final double size;
+  const AppIcon({super.key, required this.pkg, this.kind = 'other', this.size = 32});
+
+  static final Map<String, Future<Uint8List?>> _cache = {};
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: C.panel2, borderRadius: BorderRadius.circular(size * 0.25)),
+      child: Container(
+        width: size * 0.3,
+        height: size * 0.3,
+        decoration: BoxDecoration(color: C.kinds[kind] ?? C.dim, shape: BoxShape.circle),
+      ),
+    );
+    return FutureBuilder<Uint8List?>(
+      future: _cache.putIfAbsent(pkg, () => Native.appIcon(pkg)),
+      builder: (_, snap) {
+        final bytes = snap.data;
+        if (bytes == null) return fallback;
+        return Image.memory(bytes, width: size, height: size, gaplessPlayback: true, filterQuality: FilterQuality.medium);
+      },
     );
   }
 }

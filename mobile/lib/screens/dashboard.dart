@@ -38,7 +38,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(L.t('Your week', 'Iyong linggo'))),
+      appBar: AppBar(title: Text(L.t('Your week', 'Iyong linggo')), actions: [
+        if (_loaded)
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            tooltip: L.t('Export PDF', 'I-export bilang PDF'),
+            onPressed: _exportPdf,
+          ),
+      ]),
       body: !_loaded
           ? const Center(child: CircularProgressIndicator())
           : ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 24), children: [
@@ -136,37 +143,108 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final kind = a['kind'] as String? ?? 'other';
     final color = C.kinds[kind] ?? C.dim;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(a['label'] as String? ?? a['pkg'] as String,
-                maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 15)),
-          ),
-          const SizedBox(width: 8),
-          Text(L.duration(sec), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-        ]),
-        const SizedBox(height: 6),
-        Padding(
-          padding: const EdgeInsets.only(left: 20),
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        AppIcon(pkg: a['pkg'] as String, kind: kind, size: 34),
+        const SizedBox(width: 12),
+        Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(
+                child: Text(a['label'] as String? ?? a['pkg'] as String,
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 15)),
+              ),
+              const SizedBox(width: 8),
+              Text(L.duration(sec), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            ]),
+            const SizedBox(height: 6),
             ClipRRect(
               borderRadius: BorderRadius.circular(3),
               child: LinearProgressIndicator(value: top == 0 ? 0 : sec / top, minHeight: 5, color: color, backgroundColor: C.panel2),
             ),
             const SizedBox(height: 4),
-            Text(
-              late >= 60
-                  ? '${L.kind(kind)} · ${L.t('${L.duration(late)} late at night', '${L.duration(late)} sa hatinggabi')}'
-                  : L.kind(kind),
-              style: TextStyle(color: late >= 60 ? C.warn : C.dim, fontSize: 12),
-            ),
+            Text(_appDetail(kind, late), style: TextStyle(color: late >= 60 ? C.warn : C.dim, fontSize: 12)),
           ]),
         ),
       ]),
     );
+  }
+
+  String _appDetail(String kind, double late) => late >= 60
+      ? '${L.kind(kind)} · ${L.t('${L.duration(late)} late at night', '${L.duration(late)} sa hatinggabi')}'
+      : L.kind(kind);
+
+  String _hex(Color c) => '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+
+  /// Sends the report, already translated and formatted, to Android to lay out as a PDF and share.
+  Future<void> _exportPdf() async {
+    final now = DateTime.now();
+    final d = _days.isEmpty ? null : _days.last;
+    final s = d == null ? null : EyeScore.of(d);
+    final apps = _apps[_appDays] ?? const [];
+    final top = apps.isEmpty ? 1.0 : (apps.first['seconds'] as num).toDouble();
+    const kinds = ['reading', 'watching', 'gaming', 'other'];
+    int sumI(int Function(DayStats) f) => _days.fold(0, (s, d) => s + f(d));
+    double sumD(double Function(DayStats) f) => _days.fold(0.0, (s, d) => s + f(d));
+    final longest = _days.fold<double>(0, (m, d) => d.longest > m ? d.longest : m);
+    final scores = _days.map(EyeScore.of).whereType<EyeScore>().toList();
+    final avg = scores.isEmpty ? null : (scores.fold(0, (s, e) => s + e.value) / scores.length).round();
+    String two(int n) => n.toString().padLeft(2, '0');
+    final date = '${now.year}-${two(now.month)}-${two(now.day)}';
+
+    final ok = await Native.exportPdf({
+      'fileName': 'ScreenRest-report-$date.pdf',
+      'title': L.t('ScreenRest report', 'Ulat ng ScreenRest'),
+      'subtitle': '${L.day(now)} $date · ${L.t('last 7 days', 'nakaraang 7 araw')}',
+      'shareTitle': L.t('Share report', 'Ibahagi ang ulat'),
+      'footer': L.t('Made by ScreenRest on this phone. A wellness summary, not medical advice.',
+          'Ginawa ng ScreenRest sa phone na ito. Buod para sa kalusugan, hindi payong medikal.'),
+      'kindColors': {for (final k in kinds) k: _hex(C.kinds[k] ?? C.dim)},
+      'kindLabels': {for (final k in kinds) k: L.kind(k)},
+      'scoreTitle': L.t('TODAY\'S EYE SCORE', 'EYE SCORE NGAYONG ARAW'),
+      'score': s?.value,
+      'scoreLabel': s?.label,
+      'good': s?.good ?? const <String>[],
+      'bad': s?.bad ?? const <String>[],
+      'noScore': L.t('Not enough phone use today for a score yet.', 'Kulang pa ang paggamit ng phone ngayon para sa score.'),
+      'appsTitle': '${L.t('TOP APPS', 'MGA PINAKAGINAMIT NA APP')} · ${_appDays == 1 ? L.t('TODAY', 'NGAYON') : L.t('LAST 7 DAYS', 'NAKARAANG 7 ARAW')}',
+      'noApps': L.t('No app use recorded yet.', 'Wala pang naitalang paggamit ng app.'),
+      'apps': [
+        for (final a in apps)
+          {
+            'pkg': a['pkg'],
+            'label': a['label'] ?? a['pkg'],
+            'kind': a['kind'] ?? 'other',
+            'time': L.duration(a['seconds'] as num),
+            'frac': top == 0 ? 0.0 : (a['seconds'] as num) / top,
+            'detail': _appDetail(a['kind'] as String? ?? 'other', (a['late'] as num? ?? 0).toDouble()),
+            'late': (a['late'] as num? ?? 0) >= 60,
+          }
+      ],
+      'chartTitle': L.t('SCREEN TIME, LAST 7 DAYS', 'SCREEN TIME, NAKARAANG 7 ARAW'),
+      'days': [
+        for (final d in _days)
+          {
+            'day': L.day(d.date),
+            'total': d.total,
+            'totalText': d.total >= 3600 ? '${(d.total / 3600).toStringAsFixed(1)}h' : '${(d.total / 60).round()}m',
+            for (final k in kinds) k: _value(d, k),
+          }
+      ],
+      'totalsTitle': L.t('THIS WEEK', 'NGAYONG LINGGO'),
+      'totals': [
+        {'label': L.t('average eye score', 'karaniwang eye score'), 'value': avg?.toString() ?? '–'},
+        {'label': L.t('breaks taken', 'break na nagawa'), 'value': '${sumI((d) => d.taken)}'},
+        {'label': L.t('breaks skipped', 'nilaktawan'), 'value': '${sumI((d) => d.skipped)}'},
+        {'label': L.t('longest without a rest', 'pinakamahaba nang walang pahinga'), 'value': L.duration(longest)},
+        {'label': L.t('late at night', 'sa hatinggabi'), 'value': L.duration(sumD((d) => d.late))},
+        {'label': L.t('in a dark room', 'sa madilim na kuwarto'), 'value': L.duration(sumD((d) => d.dark))},
+      ],
+    });
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(L.t('Couldn\'t make the PDF. Please try again.', 'Hindi nagawa ang PDF. Pakisubukang muli.'))));
+    }
   }
 
   Widget _line(IconData icon, Color color, String text) => Padding(
